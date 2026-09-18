@@ -86,6 +86,7 @@ export default function AdminScanner() {
 
     let html5QrCode = null;
     let isRunning = false;
+    let isCancelled = false;
 
     const onScanSuccess = async (decodedText) => {
       const code = decodedText.trim();
@@ -145,15 +146,25 @@ export default function AdminScanner() {
           onScanSuccess,
           () => {}
         );
+
+        if (isCancelled) {
+          await html5QrCode.stop();
+          await html5QrCode.clear();
+          return;
+        }
+
         isRunning = true;
       } catch (err) {
-        console.error('Gagal mengakses sensor kamera:', err);
+        if (!isCancelled) {
+          console.error('Gagal mengakses sensor kamera:', err);
+        }
       }
     };
 
     const timer = setTimeout(startCamera, 120);
 
     return () => {
+      isCancelled = true;
       clearTimeout(timer);
       if (html5QrCode && isRunning) {
         html5QrCode
