@@ -18,16 +18,12 @@ export default function Invitation() {
   const ticketCode = searchParams.get('code');
   
   const [tamu, setTamu] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(Boolean(ticketCode));
+  const [error, setError] = useState(ticketCode ? '' : 'Ticket code not found in the invitation link.');
   const qrRef = useRef(null);
 
   useEffect(() => {
-    if (!ticketCode) {
-      setError('Ticket code not found in the invitation link.');
-      setLoading(false);
-      return;
-    }
+    if (!ticketCode) return;
 
     // 1. Fetch initial attendee data
     async function fetchTamu() {

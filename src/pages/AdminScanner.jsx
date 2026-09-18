@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { supabase } from '../supabase';
 import { 
@@ -19,39 +19,45 @@ import {
   ShieldCheck 
 } from 'lucide-react';
 
+const playTone = (freq, duration, soundEnabled) => {
+  if (!soundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch (e) {
+    console.warn("Audio context not allowed yet:", e);
+  }
+};
+
 export default function AdminScanner() {
   const [stats, setStats] = useState({ undanganHadir: 0, totalUndangan: 0, guestHadir: 0 });
   const [activeTab, setActiveTab] = useState('scanner');
   
   const [guestName, setGuestName] = useState('');
   const [invName, setInvName] = useState('');
+  const [invPhone, setInvPhone] = useState('');
   const [invCode, setInvCode] = useState('');
   const [copiedCode, setCopiedCode] = useState(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const soundEnabledRef = useRef(soundEnabled);
   const [modalData, setModalData] = useState(null);
   const [recentAttendees, setRecentAttendees] = useState([]);
   const [searchFilter, setSearchFilter] = useState('');
 
-  const playTone = (freq, duration) => {
-    if (!soundEnabled) return;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      gain.gain.setValueAtTime(0.15, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + duration);
-    } catch (e) {
-      console.warn("Audio context not allowed yet:", e);
-    }
-  };
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
 
   const loadData = async () => {
     const { data } = await supabase
@@ -69,7 +75,9 @@ export default function AdminScanner() {
   };
 
   useEffect(() => {
-    loadData();
+    const timer = setTimeout(loadData, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   // Inisialisasi scanner video langsung tanpa UI default library
@@ -89,7 +97,7 @@ export default function AdminScanner() {
         .single();
 
       if (error || !data) {
-        playTone(280, 0.3);
+        playTone(280, 0.3, soundEnabledRef.current);
         setModalData({
           type: 'error',
           title: 'QR Tidak Terdaftar',
@@ -99,7 +107,7 @@ export default function AdminScanner() {
       }
 
       if (data.is_checked_in) {
-        playTone(420, 0.35);
+        playTone(420, 0.35, soundEnabledRef.current);
         setModalData({
           type: 'warning',
           title: 'Sudah Check-In!',
@@ -115,7 +123,7 @@ export default function AdminScanner() {
         .update({ is_checked_in: true, checked_in_at: now })
         .eq('id', data.id);
 
-      playTone(920, 0.2);
+      playTone(920, 0.2, soundEnabledRef.current);
       setModalData({
         type: 'success',
         title: 'Presensi Sukses!',
@@ -173,7 +181,7 @@ export default function AdminScanner() {
     }]);
 
     if (!error) {
-      playTone(920, 0.15);
+      playTone(920, 0.15, soundEnabledRef.current);
       setModalData({
         type: 'success',
         title: 'Guest Masuk!',
@@ -188,22 +196,34 @@ export default function AdminScanner() {
 
   const handleAddUndangan = async (e) => {
     e.preventDefault();
-    if (!invName.trim()) return;
+    if (!invName.trim() || !invPhone.trim()) return;
 
     setIsSubmitting(true);
     const code = invCode.trim() ? invCode.trim().toUpperCase() : `INV-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const phone = invPhone.replace(/\D/g, '').replace(/^0/, '62');
+
+    if (!/^62\d{8,13}$/.test(phone)) {
+      alert('Nomor WhatsApp tidak valid. Gunakan format 08xxxxxxxxxx atau +628xxxxxxxxxx.');
+      setIsSubmitting(false);
+      return;
+    }
 
     const { error } = await supabase.from('attendees').insert([{
       ticket_code: code,
       name: invName.trim(),
+      phone,
       category: 'undangan',
       is_checked_in: false
     }]);
 
     if (error) {
-      alert("Gagal menambahkan: Kode tiket kemungkinan sudah ada.");
+      alert(`Gagal menambahkan: ${error.message}`);
     } else {
+      const invitationUrl = `${window.location.origin}/invitation?code=${code}`;
+      const message = `Hello ${invName.trim()}!\n\nYou are invited to Diponegoro International Youth Festival 2026.\n\nTicket code: ${code}\n\nOpen your digital pass here:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
       setInvName('');
+      setInvPhone('');
       setInvCode('');
       loadData();
       alert(`Undangan untuk "${invName}" berhasil dibuat dengan kode ${code}!`);
@@ -431,6 +451,20 @@ export default function AdminScanner() {
               </div>
 
               <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">Nomor WhatsApp *</label>
+                <input
+                  type="tel"
+                  required
+                  value={invPhone}
+                  onChange={(e) => setInvPhone(e.target.value)}
+                  placeholder="Contoh: 081234567890"
+                  inputMode="tel"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm transition"
+                />
+                <p className="text-[11px] text-slate-400 mt-1.5">Tekan Enter untuk menyimpan dan membuka WhatsApp.</p>
+              </div>
+
+              <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">Kode Tiket (Opsional)</label>
                 <input
                   type="text"
@@ -443,7 +477,7 @@ export default function AdminScanner() {
 
               <button
                 type="submit"
-                disabled={isSubmitting || !invName.trim()}
+                disabled={isSubmitting || !invName.trim() || !invPhone.trim()}
                 className="w-full py-3.5 bg-gradient-to-tr from-indigo-700 to-indigo-600 hover:from-indigo-600 hover:to-indigo-500 text-white font-bold rounded-xl shadow-sm transition disabled:opacity-50 text-xs flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
