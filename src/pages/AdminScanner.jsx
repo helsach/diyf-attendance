@@ -6,8 +6,6 @@ import {
   UserPlus, 
   Users, 
   CheckCircle2, 
-  AlertTriangle, 
-  XCircle,
   Search, 
   Volume2, 
   VolumeX, 
@@ -16,7 +14,11 @@ import {
   Check, 
   Trash2, 
   Sparkles, 
-  ShieldCheck 
+  ShieldCheck,
+  LogOut,
+  Download,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 const playTone = (freq, duration, soundEnabled) => {
@@ -38,12 +40,58 @@ const playTone = (freq, duration, soundEnabled) => {
   }
 };
 
+const countryCodes = [
+  ['93', 'Afghanistan'], ['355', 'Albania'], ['213', 'Algeria'], ['376', 'Andorra'], ['244', 'Angola'],
+  ['1268', 'Antigua dan Barbuda'], ['54', 'Argentina'], ['374', 'Armenia'], ['297', 'Aruba'], ['61', 'Australia'],
+  ['43', 'Austria'], ['994', 'Azerbaijan'], ['1242', 'Bahamas'], ['973', 'Bahrain'], ['880', 'Bangladesh'],
+  ['1246', 'Barbados'], ['375', 'Belarus'], ['32', 'Belgia'], ['501', 'Belize'], ['229', 'Benin'],
+  ['975', 'Bhutan'], ['591', 'Bolivia'], ['387', 'Bosnia dan Herzegovina'], ['267', 'Botswana'], ['55', 'Brasil'],
+  ['673', 'Brunei'], ['359', 'Bulgaria'], ['226', 'Burkina Faso'], ['257', 'Burundi'], ['238', 'Cabo Verde'],
+  ['855', 'Kamboja'], ['237', 'Kamerun'], ['1', 'Kanada'], ['236', 'Republik Afrika Tengah'], ['235', 'Chad'],
+  ['56', 'Chile'], ['86', 'China'], ['57', 'Kolombia'], ['269', 'Komoro'], ['242', 'Kongo'],
+  ['243', 'Republik Demokratik Kongo'], ['682', 'Kepulauan Cook'], ['506', 'Kosta Rika'], ['385', 'Kroasia'],
+  ['53', 'Kuba'], ['357', 'Siprus'], ['420', 'Ceko'], ['45', 'Denmark'], ['253', 'Djibouti'],
+  ['1767', 'Dominika'], ['1809', 'Republik Dominika'], ['593', 'Ekuador'], ['20', 'Mesir'], ['503', 'El Salvador'],
+  ['240', 'Guinea Khatulistiwa'], ['291', 'Eritrea'], ['372', 'Estonia'], ['268', 'Eswatini'], ['251', 'Ethiopia'],
+  ['679', 'Fiji'], ['358', 'Finlandia'], ['33', 'Prancis'], ['241', 'Gabon'], ['220', 'Gambia'],
+  ['995', 'Georgia'], ['49', 'Jerman'], ['233', 'Ghana'], ['30', 'Yunani'], ['1473', 'Grenada'],
+  ['502', 'Guatemala'], ['224', 'Guinea'], ['245', 'Guinea-Bissau'], ['592', 'Guyana'], ['509', 'Haiti'],
+  ['504', 'Honduras'], ['852', 'Hong Kong'], ['36', 'Hungaria'], ['354', 'Islandia'], ['91', 'India'],
+  ['62', 'Indonesia'], ['98', 'Iran'], ['964', 'Irak'], ['353', 'Irlandia'], ['972', 'Israel'],
+  ['39', 'Italia'], ['225', 'Pantai Gading'], ['1876', 'Jamaika'], ['81', 'Jepang'], ['962', 'Yordania'],
+  ['7', 'Kazakhstan / Rusia'], ['254', 'Kenya'], ['686', 'Kiribati'], ['383', 'Kosovo'], ['965', 'Kuwait'],
+  ['996', 'Kirgizstan'], ['856', 'Laos'], ['371', 'Latvia'], ['961', 'Lebanon'], ['266', 'Lesotho'],
+  ['231', 'Liberia'], ['218', 'Libya'], ['423', 'Liechtenstein'], ['370', 'Lithuania'], ['352', 'Luksemburg'],
+  ['853', 'Makau'], ['261', 'Madagaskar'], ['265', 'Malawi'], ['60', 'Malaysia'], ['960', 'Maladewa'],
+  ['223', 'Mali'], ['356', 'Malta'], ['692', 'Kepulauan Marshall'], ['222', 'Mauritania'], ['230', 'Mauritius'],
+  ['52', 'Meksiko'], ['691', 'Mikronesia'], ['373', 'Moldova'], ['377', 'Monako'], ['976', 'Mongolia'],
+  ['382', 'Montenegro'], ['212', 'Maroko'], ['258', 'Mozambik'], ['95', 'Myanmar'], ['264', 'Namibia'],
+  ['674', 'Nauru'], ['977', 'Nepal'], ['31', 'Belanda'], ['64', 'Selandia Baru'], ['505', 'Nikaragua'],
+  ['227', 'Niger'], ['234', 'Nigeria'], ['683', 'Niue'], ['850', 'Korea Utara'], ['389', 'Makedonia Utara'],
+  ['47', 'Norwegia'], ['968', 'Oman'], ['92', 'Pakistan'], ['680', 'Palau'], ['970', 'Palestina'],
+  ['507', 'Panama'], ['675', 'Papua Nugini'], ['595', 'Paraguay'], ['51', 'Peru'], ['63', 'Filipina'],
+  ['48', 'Polandia'], ['351', 'Portugal'], ['974', 'Qatar'], ['40', 'Rumania'], ['250', 'Rwanda'],
+  ['1869', 'Saint Kitts dan Nevis'], ['1758', 'Saint Lucia'], ['1784', 'Saint Vincent dan Grenadine'], ['685', 'Samoa'],
+  ['378', 'San Marino'], ['239', 'Sao Tome dan Principe'], ['966', 'Arab Saudi'], ['221', 'Senegal'], ['381', 'Serbia'],
+  ['248', 'Seychelles'], ['232', 'Sierra Leone'], ['65', 'Singapura'], ['421', 'Slovakia'], ['386', 'Slovenia'],
+  ['677', 'Kepulauan Solomon'], ['252', 'Somalia'], ['27', 'Afrika Selatan'], ['82', 'Korea Selatan'], ['211', 'Sudan Selatan'],
+  ['34', 'Spanyol'], ['94', 'Sri Lanka'], ['249', 'Sudan'], ['597', 'Suriname'], ['46', 'Swedia'],
+  ['41', 'Swiss'], ['963', 'Suriah'], ['886', 'Taiwan'], ['992', 'Tajikistan'], ['255', 'Tanzania'],
+  ['66', 'Thailand'], ['670', 'Timor-Leste'], ['228', 'Togo'], ['690', 'Tokelau'], ['676', 'Tonga'],
+  ['1868', 'Trinidad dan Tobago'], ['216', 'Tunisia'], ['90', 'Turki'], ['993', 'Turkmenistan'], ['688', 'Tuvalu'],
+  ['256', 'Uganda'], ['380', 'Ukraina'], ['971', 'Uni Emirat Arab'], ['44', 'Britania Raya'], ['1', 'Amerika Serikat'],
+  ['598', 'Uruguay'], ['998', 'Uzbekistan'], ['678', 'Vanuatu'], ['379', 'Vatikan'], ['58', 'Venezuela'],
+  ['84', 'Vietnam'], ['681', 'Wallis dan Futuna'], ['967', 'Yaman'], ['260', 'Zambia'], ['263', 'Zimbabwe']
+].map(([code, name]) => ({ code, name }));
+
 export default function AdminScanner() {
   const [stats, setStats] = useState({ undanganHadir: 0, totalUndangan: 0, guestHadir: 0 });
   const [activeTab, setActiveTab] = useState('scanner');
   
   const [guestName, setGuestName] = useState('');
   const [invName, setInvName] = useState('');
+  const [invCountryCode, setInvCountryCode] = useState('62');
+  const [countrySearch, setCountrySearch] = useState('+62 Indonesia');
   const [invPhone, setInvPhone] = useState('');
   const [invCode, setInvCode] = useState('');
   const [copiedCode, setCopiedCode] = useState(null);
@@ -51,10 +99,13 @@ export default function AdminScanner() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const soundEnabledRef = useRef(soundEnabled);
-  const [modalData, setModalData] = useState(null);
   const [recentAttendees, setRecentAttendees] = useState([]);
   const [searchFilter, setSearchFilter] = useState('');
   const scanInProgressRef = useRef(false);
+  const toastTimerRef = useRef(null);
+  const [toast, setToast] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     soundEnabledRef.current = soundEnabled;
@@ -81,6 +132,29 @@ export default function AdminScanner() {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-attendees-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendees' }, loadData)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+
+  const showToast = (message, type = 'success') => {
+    clearTimeout(toastTimerRef.current);
+    setToast({ message, type });
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
   // Inisialisasi scanner video langsung tanpa UI default library
   useEffect(() => {
     if (activeTab !== 'scanner') return;
@@ -104,22 +178,13 @@ export default function AdminScanner() {
 
         if (error || !data) {
           playTone(280, 0.3, soundEnabledRef.current);
-          setModalData({
-            type: 'error',
-            title: 'QR Tidak Terdaftar',
-            desc: `Kode "${code}" tidak ditemukan pada database.`
-          });
+          showToast(`QR tidak terdaftar: kode "${code}" tidak ditemukan.`, 'error');
           return;
         }
 
         if (data.is_checked_in) {
           playTone(420, 0.35, soundEnabledRef.current);
-          setModalData({
-            type: 'warning',
-            title: 'Sudah Check-In!',
-            desc: `${data.name} sebelumnya sudah dinyatakan hadir.`,
-            detail: data
-          });
+          showToast(`${data.name} sudah check-in sebelumnya.`, 'warning');
           return;
         }
 
@@ -134,22 +199,12 @@ export default function AdminScanner() {
 
         if (checkInError || !checkedInAttendee) {
           playTone(420, 0.35, soundEnabledRef.current);
-          setModalData({
-            type: 'warning',
-            title: 'Sudah Check-In!',
-            desc: `${data.name} baru saja diproses oleh perangkat lain.`,
-            detail: data
-          });
+          showToast(`${data.name} baru saja diproses oleh perangkat lain.`, 'warning');
           return;
         }
 
         playTone(920, 0.2, soundEnabledRef.current);
-        setModalData({
-          type: 'success',
-          title: 'Presensi Sukses!',
-          desc: `Selamat datang, ${data.name}!`,
-          detail: checkedInAttendee
-        });
+        showToast(`Presensi sukses. Selamat datang, ${checkedInAttendee.name}!`);
         loadData();
       } finally {
         scanInProgressRef.current = false;
@@ -215,14 +270,11 @@ export default function AdminScanner() {
 
     if (!error) {
       playTone(920, 0.15, soundEnabledRef.current);
-      setModalData({
-        type: 'success',
-        title: 'Guest Masuk!',
-        desc: `Tamu "${guestName}" telah dicatat kehadirannya.`,
-        detail: { ticket_code: guestCode, name: guestName, category: 'guest', checked_in_at: now }
-      });
+      showToast(`Tamu "${guestName}" berhasil dicatat.`);
       setGuestName('');
       loadData();
+    } else {
+      showToast(`Gagal mencatat tamu: ${error.message}`, 'error');
     }
     setIsSubmitting(false);
   };
@@ -233,10 +285,11 @@ export default function AdminScanner() {
 
     setIsSubmitting(true);
     const code = invCode.trim() ? invCode.trim().toUpperCase() : `INV-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-    const phone = invPhone.replace(/\D/g, '').replace(/^0/, '62');
+    const localPhone = invPhone.replace(/\D/g, '').replace(/^0+/, '');
+    const phone = `${invCountryCode}${localPhone}`;
 
-    if (!/^62\d{8,13}$/.test(phone)) {
-      alert('Nomor WhatsApp tidak valid. Gunakan format 08xxxxxxxxxx atau +628xxxxxxxxxx.');
+    if (!/^[1-9]\d{7,14}$/.test(phone)) {
+      showToast('Nomor WhatsApp tidak valid. Gunakan +kode negara, 00kode negara, atau 08xxxxxxxxxx untuk Indonesia.', 'error');
       setIsSubmitting(false);
       return;
     }
@@ -250,16 +303,26 @@ export default function AdminScanner() {
     }]);
 
     if (error) {
-      alert(`Gagal menambahkan: ${error.message}`);
+      showToast(`Gagal menambahkan: ${error.message}`, 'error');
     } else {
       const invitationUrl = `${window.location.origin}/invitation?code=${code}`;
       const message = `Hello ${invName.trim()}!\n\nYou are invited to Diponegoro International Youth Festival 2026.\n\nTicket code: ${code}\n\nOpen your digital pass here:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+      const whatsappWindow = window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+      if (whatsappWindow) {
+        await supabase
+          .from('attendees')
+          .update({ invitation_status: 'opened', invitation_sent_at: new Date().toISOString() })
+          .eq('ticket_code', code);
+        showToast(`Undangan untuk "${invName}" siap dikirim di WhatsApp.`);
+      } else {
+        showToast('Popup WhatsApp diblokir browser. Buka link dari daftar undangan.', 'error');
+      }
       setInvName('');
+      setInvCountryCode('62');
+      setCountrySearch('+62 Indonesia');
       setInvPhone('');
       setInvCode('');
       loadData();
-      alert(`Undangan untuk "${invName}" berhasil dibuat dengan kode ${code}!`);
     }
     setIsSubmitting(false);
   };
@@ -283,6 +346,36 @@ export default function AdminScanner() {
     item.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
     item.ticket_code.toLowerCase().includes(searchFilter.toLowerCase())
   );
+  const totalPages = Math.max(1, Math.ceil(filteredAttendees.length / pageSize));
+  const paginatedAttendees = filteredAttendees.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const handleSearchChange = (event) => {
+    setSearchFilter(event.target.value);
+    setCurrentPage(1);
+  };
+
+  const exportCsv = () => {
+    const headers = ['Tiket', 'Nama', 'Nomor WhatsApp', 'Kategori', 'Status Check-In', 'Status Undangan'];
+    const rows = recentAttendees.map((item) => [
+      item.ticket_code,
+      item.name,
+      item.phone ?? '',
+      item.category,
+      item.is_checked_in ? 'Hadir' : 'Menunggu',
+      item.invitation_status ?? 'pending'
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `rekap-kehadiran-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast('Rekap CSV berhasil diunduh.');
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans pb-16 antialiased">
@@ -322,6 +415,14 @@ export default function AdminScanner() {
             >
               <RefreshCw className="w-4 h-4" />
               <span className="hidden sm:inline">Refresh</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="p-2 sm:px-3 sm:py-2 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+              title="Keluar"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Keluar</span>
             </button>
           </div>
         </div>
@@ -485,16 +586,38 @@ export default function AdminScanner() {
 
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">Nomor WhatsApp *</label>
-                <input
-                  type="tel"
-                  required
-                  value={invPhone}
-                  onChange={(e) => setInvPhone(e.target.value)}
-                  placeholder="Contoh: 081234567890"
-                  inputMode="tel"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm transition"
-                />
-                <p className="text-[11px] text-slate-400 mt-1.5">Tekan Enter untuk menyimpan dan membuka WhatsApp.</p>
+                <div className="flex gap-2">
+                  <div className="w-44 shrink-0">
+                    <input
+                      list="country-code-options"
+                      value={countrySearch}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCountrySearch(value);
+                        const selectedCountry = countryCodes.find(({ code, name }) => value === `+${code} ${name}`);
+                        if (selectedCountry) setInvCountryCode(selectedCountry.code);
+                      }}
+                      aria-label="Cari kode negara"
+                      placeholder="Cari negara..."
+                      className="w-full px-3 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm transition"
+                    />
+                    <datalist id="country-code-options">
+                      {countryCodes.map(({ code, name }) => (
+                        <option key={`${code}-${name}`} value={`+${code} ${name}`} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <input
+                    type="tel"
+                    required
+                    value={invPhone}
+                    onChange={(e) => setInvPhone(e.target.value)}
+                    placeholder="81234567890"
+                    inputMode="tel"
+                    className="min-w-0 flex-1 px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm transition"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1.5">Pilih kode negara, lalu masukkan nomor tanpa kode negara.</p>
               </div>
 
               <div>
@@ -527,15 +650,20 @@ export default function AdminScanner() {
                 <h3 className="font-black text-slate-900 text-base">Rekapitulasi Kehadiran</h3>
                 <p className="text-xs text-slate-500">Salin link undangan WhatsApp atau kelola entri tamu</p>
               </div>
-              <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                <input
-                  type="text"
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  placeholder="Cari nama atau kode tiket..."
-                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
-                />
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="text"
+                    value={searchFilter}
+                    onChange={handleSearchChange}
+                    placeholder="Cari nama atau kode tiket..."
+                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+                  />
+                </div>
+                <button onClick={exportCsv} className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700">
+                  <Download className="w-4 h-4" /> Export CSV
+                </button>
               </div>
             </div>
 
@@ -547,16 +675,17 @@ export default function AdminScanner() {
                     <th className="py-3 px-4">Nama Tamu</th>
                     <th className="py-3 px-4">Kategori</th>
                     <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Undangan</th>
                     <th className="py-3 px-4 text-center">Tindakan</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredAttendees.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="text-center py-10 text-slate-400">Tidak ada tamu yang cocok.</td>
+                      <td colSpan="6" className="text-center py-10 text-slate-400">Tidak ada tamu yang cocok.</td>
                     </tr>
                   ) : (
-                    filteredAttendees.map((item) => (
+                    paginatedAttendees.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/70 transition">
                         <td className="py-3.5 px-4 font-mono font-bold text-slate-700">{item.ticket_code}</td>
                         <td className="py-3.5 px-4 font-semibold text-slate-900">{item.name}</td>
@@ -579,6 +708,13 @@ export default function AdminScanner() {
                               Menunggu
                             </span>
                           )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {item.category === 'undangan' ? (
+                            <span className={`text-[10px] font-bold uppercase ${item.invitation_status === 'opened' || item.invitation_status === 'sent' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                              {item.invitation_status === 'opened' ? 'Link dibuka' : item.invitation_status === 'sent' ? 'Terkirim' : 'Belum dikirim'}
+                            </span>
+                          ) : <span className="text-slate-300">-</span>}
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <div className="flex items-center justify-center gap-1.5">
@@ -617,43 +753,28 @@ export default function AdminScanner() {
                 </tbody>
               </table>
             </div>
+            <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+              <span className="text-[11px] text-slate-400">{filteredAttendees.length} data</span>
+              <div className="flex items-center gap-2">
+                <button disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1)} className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-[11px] font-bold text-slate-600">Halaman {currentPage} / {totalPages}</span>
+                <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((page) => page + 1)} className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>
 
-      {modalData && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 w-full max-w-sm rounded-3xl p-6 text-center shadow-xl">
-            <div className={`w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-4 ${
-              modalData.type === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-              modalData.type === 'warning' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-              'bg-rose-50 text-rose-600 border border-rose-100'
-            }`}>
-              {modalData.type === 'success' && <CheckCircle2 className="w-8 h-8" />}
-              {modalData.type === 'warning' && <AlertTriangle className="w-8 h-8" />}
-              {modalData.type === 'error' && <XCircle className="w-8 h-8" />}
-            </div>
-
-            <h4 className="text-base font-black text-slate-900">{modalData.title}</h4>
-            <p className="text-xs text-slate-500 mt-1 leading-relaxed">{modalData.desc}</p>
-
-            {modalData.detail?.name && (
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 my-4 text-left text-xs space-y-1">
-                <div className="text-[10px] font-mono text-slate-400 font-semibold">{modalData.detail.ticket_code}</div>
-                <div className="text-slate-900 font-bold text-sm">{modalData.detail.name}</div>
-                <div className="text-indigo-600 uppercase font-extrabold text-[10px] tracking-wider">{modalData.detail.category}</div>
-              </div>
-            )}
-
-            <button
-              onClick={() => setModalData(null)}
-              className="w-full mt-2 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
-            >
-              Lanjutkan Scan
-            </button>
-          </div>
+      {toast && (
+        <div className={`fixed bottom-5 right-5 z-50 max-w-sm rounded-xl border px-4 py-3 text-xs font-bold shadow-lg ${toast.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-700' : toast.type === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+          {toast.message}
         </div>
       )}
+
     </div>
   );
 }

@@ -22,6 +22,14 @@ Sistem manajemen presensi acara modern berbasis web untuk registrasi tiket undan
 - **Scanner Core**: `html5-qrcode`
 - **QR Generator**: `qrcode.react`
 
+## Supabase Setup
+
+Jalankan migration secara berurutan, termasuk `002_secure_admin_and_invitation_status.sql` dan `003_restrict_admin_access.sql`. Migration ini mengaktifkan RLS, membatasi data untuk user yang berhasil login, dan menyediakan RPC aman untuk halaman tiket publik.
+
+Buat user admin melalui Supabase Dashboard pada **Authentication > Users**, lalu gunakan email dan password tersebut di `/admin/login`. Semua user yang berhasil login akan dapat mengelola presensi. Aktifkan Realtime untuk tabel `attendees` jika ingin perubahan data langsung terlihat di dashboard admin.
+
+Undangan tetap memakai link `wa.me`: setelah data tersimpan, browser membuka pesan yang sudah terisi dan status dicatat sebagai `opened` ketika tab WhatsApp berhasil dibuka.
+
 ---
 
 ## 🚀 Memulai (Local Development)

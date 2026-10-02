@@ -25,43 +25,25 @@ export default function Invitation() {
   useEffect(() => {
     if (!ticketCode) return;
 
-    // 1. Fetch initial attendee data
     async function fetchTamu() {
       const { data, error } = await supabase
-        .from('attendees')
-        .select('*')
-        .eq('ticket_code', ticketCode)
-        .single();
+        .rpc('get_attendee_by_ticket', { p_ticket_code: ticketCode });
 
-      if (error || !data) {
+      const attendee = data?.[0];
+      if (error || !attendee) {
         setError('Invitation pass not found or the link has expired.');
       } else {
-        setTamu(data);
+        setTamu(attendee);
       }
       setLoading(false);
     }
 
     fetchTamu();
 
-    // 2. Real-time updates listener
-    const channel = supabase
-      .channel(`realtime-ticket-${ticketCode}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'attendees',
-          filter: `ticket_code=eq.${ticketCode}`,
-        },
-        (payload) => {
-          setTamu(payload.new);
-        }
-      )
-      .subscribe();
+    const refreshTimer = setInterval(fetchTamu, 10000);
 
     return () => {
-      supabase.removeChannel(channel);
+      clearInterval(refreshTimer);
     };
   }, [ticketCode]);
 
