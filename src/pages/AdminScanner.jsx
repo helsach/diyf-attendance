@@ -54,6 +54,7 @@ export default function AdminScanner() {
   const [modalData, setModalData] = useState(null);
   const [recentAttendees, setRecentAttendees] = useState([]);
   const [searchFilter, setSearchFilter] = useState('');
+  const scanInProgressRef = useRef(false);
 
   useEffect(() => {
     soundEnabledRef.current = soundEnabled;
@@ -89,49 +90,70 @@ export default function AdminScanner() {
     let isCancelled = false;
 
     const onScanSuccess = async (decodedText) => {
+      if (scanInProgressRef.current) return;
+      scanInProgressRef.current = true;
+
       const code = decodedText.trim();
-      
-      const { data, error } = await supabase
-        .from('attendees')
-        .select('*')
-        .eq('ticket_code', code)
-        .single();
 
-      if (error || !data) {
-        playTone(280, 0.3, soundEnabledRef.current);
+      try {
+        const { data, error } = await supabase
+          .from('attendees')
+          .select('*')
+          .eq('ticket_code', code)
+          .single();
+
+        if (error || !data) {
+          playTone(280, 0.3, soundEnabledRef.current);
+          setModalData({
+            type: 'error',
+            title: 'QR Tidak Terdaftar',
+            desc: `Kode "${code}" tidak ditemukan pada database.`
+          });
+          return;
+        }
+
+        if (data.is_checked_in) {
+          playTone(420, 0.35, soundEnabledRef.current);
+          setModalData({
+            type: 'warning',
+            title: 'Sudah Check-In!',
+            desc: `${data.name} sebelumnya sudah dinyatakan hadir.`,
+            detail: data
+          });
+          return;
+        }
+
+        const now = new Date().toISOString();
+        const { data: checkedInAttendee, error: checkInError } = await supabase
+          .from('attendees')
+          .update({ is_checked_in: true, checked_in_at: now })
+          .eq('id', data.id)
+          .eq('is_checked_in', false)
+          .select()
+          .single();
+
+        if (checkInError || !checkedInAttendee) {
+          playTone(420, 0.35, soundEnabledRef.current);
+          setModalData({
+            type: 'warning',
+            title: 'Sudah Check-In!',
+            desc: `${data.name} baru saja diproses oleh perangkat lain.`,
+            detail: data
+          });
+          return;
+        }
+
+        playTone(920, 0.2, soundEnabledRef.current);
         setModalData({
-          type: 'error',
-          title: 'QR Tidak Terdaftar',
-          desc: `Kode "${code}" tidak ditemukan pada database.`
+          type: 'success',
+          title: 'Presensi Sukses!',
+          desc: `Selamat datang, ${data.name}!`,
+          detail: checkedInAttendee
         });
-        return;
+        loadData();
+      } finally {
+        scanInProgressRef.current = false;
       }
-
-      if (data.is_checked_in) {
-        playTone(420, 0.35, soundEnabledRef.current);
-        setModalData({
-          type: 'warning',
-          title: 'Sudah Check-In!',
-          desc: `${data.name} sebelumnya sudah dinyatakan hadir.`,
-          detail: data
-        });
-        return;
-      }
-
-      const now = new Date().toISOString();
-      await supabase
-        .from('attendees')
-        .update({ is_checked_in: true, checked_in_at: now })
-        .eq('id', data.id);
-
-      playTone(920, 0.2, soundEnabledRef.current);
-      setModalData({
-        type: 'success',
-        title: 'Presensi Sukses!',
-        desc: `Selamat datang, ${data.name}!`,
-        detail: { ...data, checked_in_at: now }
-      });
-      loadData();
     };
 
     const startCamera = async () => {
