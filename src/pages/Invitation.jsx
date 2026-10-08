@@ -112,7 +112,7 @@ export default function Invitation() {
           <div className="flex items-center gap-2 min-w-0">
             <img src="/diyf-logo.png" alt="DIYF" className="h-8 w-8 shrink-0 rounded-xl bg-white object-contain p-1 shadow-md" />
             <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full bg-[#ffb800] text-[#492e6e] shadow-sm">
-              <Sparkles className="w-3 h-3" /> Guest Pass
+              Guest Pass
             </span>
             <span className="ml-auto min-w-0 truncate font-mono text-xs font-bold text-[#ffda70]">{tamu.ticket_code}</span>
           </div>

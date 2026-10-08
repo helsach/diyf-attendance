@@ -439,24 +439,24 @@ export default function AdminScanner() {
 
   return (
     <div className="min-h-screen bg-[#f8f7fb] text-slate-800 font-sans pb-16 antialiased">
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#492e6e]/10 px-4 sm:px-8 py-3.5 shadow-[0_8px_30px_rgba(73,46,110,0.08)]">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#492e6e]/10 px-3 sm:px-8 py-2.5 sm:py-3.5 shadow-[0_8px_30px_rgba(73,46,110,0.08)]">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-white border border-[#ffb800]/50 flex items-center justify-center shadow-md shadow-[#492e6e]/15 overflow-hidden">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl bg-white border border-[#ffb800]/50 flex items-center justify-center shadow-md shadow-[#492e6e]/15 overflow-hidden shrink-0">
               <img src="/diyf-logo.png" alt="DIYF" className="h-full w-full object-contain p-1" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-black tracking-tight text-slate-900 text-base">DIYF Attendance</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40 uppercase">
+                <span className="font-black tracking-tight text-slate-900 text-sm sm:text-base truncate">DIYF Attendance</span>
+                <span className="hidden sm:inline px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40 uppercase">
                   Admin Deck
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">Live Attendance & Fast-track Gate</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 truncate">Live Attendance & Fast-track Gate</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button 
               onClick={() => setSoundEnabled(!soundEnabled)} 
               className={`p-2 sm:px-3 sm:py-2 rounded-xl border transition-all text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
@@ -488,9 +488,9 @@ export default function AdminScanner() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-8 pt-6 space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+      <main className="max-w-5xl mx-auto px-3 sm:px-8 pt-4 sm:pt-6 space-y-4 sm:space-y-6">
+        <div className="flex sm:grid sm:grid-cols-3 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible snap-x snap-mandatory pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
+          <div className="min-w-[260px] sm:min-w-0 snap-start bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Tamu Undangan</span>
               <span className="p-2 rounded-xl bg-[#492e6e]/10 text-[#492e6e]"><Users className="w-4 h-4" /></span>
@@ -507,7 +507,7 @@ export default function AdminScanner() {
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+          <div className="min-w-[260px] sm:min-w-0 snap-start bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Guest Walk-In</span>
               <span className="p-2 rounded-xl bg-[#ffb800]/15 text-[#492e6e]"><UserPlus className="w-4 h-4" /></span>
@@ -521,7 +521,7 @@ export default function AdminScanner() {
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+          <div className="min-w-[260px] sm:min-w-0 snap-start bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Total Kehadiran</span>
               <span className="p-2 rounded-xl bg-[#492e6e]/10 text-[#492e6e]"><ShieldCheck className="w-4 h-4" /></span>
@@ -536,8 +536,8 @@ export default function AdminScanner() {
           </div>
         </div>
 
-        <div className="flex items-center justify-start overflow-x-auto pb-1">
-          <div className="p-1 bg-slate-200/80 rounded-2xl flex gap-1 border border-slate-300/60">
+        <div className="flex items-center justify-start overflow-x-auto pb-1 -mx-1 px-1">
+          <div className="p-1 bg-slate-200/80 rounded-2xl flex gap-1 border border-slate-300/60 min-w-max">
             {[
               { id: 'scanner', label: 'Scan QR Tiket', icon: QrCode },
               { id: 'guest', label: 'Walk-In Guest', icon: UserPlus },
@@ -565,7 +565,7 @@ export default function AdminScanner() {
         </div>
 
         {activeTab === 'scanner' && (
-          <div className="bg-white border border-[#492e6e]/10 rounded-[32px] p-6 sm:p-8 shadow-[0_12px_40px_rgba(73,46,110,0.08)] max-w-lg mx-auto text-center space-y-4">
+          <div className="bg-white border border-[#492e6e]/10 rounded-[28px] sm:rounded-[32px] p-4 sm:p-8 shadow-[0_12px_40px_rgba(73,46,110,0.08)] max-w-lg mx-auto text-center space-y-4">
             <div>
               <h3 className="text-lg font-black text-slate-900">Pemindai QR Code</h3>
               <p className="text-xs text-slate-500 mt-0.5">Posisikan QR code tiket tamu di tengah area pemindaian.</p>
@@ -583,7 +583,7 @@ export default function AdminScanner() {
         )}
 
         {activeTab === 'guest' && (
-          <div className="bg-white border border-slate-200 rounded-[32px] p-6 sm:p-8 shadow-sm max-w-md mx-auto">
+          <div className="bg-white border border-slate-200 rounded-[28px] sm:rounded-[32px] p-5 sm:p-8 shadow-sm max-w-md mx-auto">
             <div className="mb-6">
               <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40">
                 Meja Registrasi
@@ -620,7 +620,7 @@ export default function AdminScanner() {
         )}
 
         {activeTab === 'tambah_undangan' && (
-          <div className="bg-white border border-slate-200 rounded-[32px] p-6 sm:p-8 shadow-sm max-w-md mx-auto">
+          <div className="bg-white border border-slate-200 rounded-[28px] sm:rounded-[32px] p-5 sm:p-8 shadow-sm max-w-md mx-auto">
             <div className="mb-6">
               <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-[#492e6e]/10 text-[#492e6e] border border-[#492e6e]/20">
                 Pra-Acara
@@ -684,14 +684,14 @@ export default function AdminScanner() {
         )}
 
         {activeTab === 'list' && (
-          <div className="bg-white border border-slate-200 rounded-[32px] p-6 shadow-sm space-y-4">
+          <div className="bg-white border border-slate-200 rounded-[28px] sm:rounded-[32px] p-4 sm:p-6 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="font-black text-slate-900 text-base">Rekapitulasi Kehadiran</h3>
                 <p className="text-xs text-slate-500">Kelola undangan WhatsApp atau entri tamu</p>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <div className="relative w-full sm:w-72">
+              <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
+                <div className="relative w-full sm:w-72 col-span-2 sm:col-auto">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type="text"
@@ -713,7 +713,7 @@ export default function AdminScanner() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-600">
+              <table className="w-full min-w-[700px] text-left text-xs text-slate-600">
                 <thead className="bg-slate-50 text-slate-400 font-mono uppercase text-[10px] border-y border-slate-200">
                   <tr>
                     <th className="py-3 px-4">Tiket</th>
