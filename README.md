@@ -24,11 +24,13 @@ Sistem manajemen presensi acara modern berbasis web untuk registrasi tiket undan
 
 ## Supabase Setup
 
-Jalankan migration secara berurutan, termasuk `002_secure_admin_and_invitation_status.sql` dan `003_restrict_admin_access.sql`. Migration ini mengaktifkan RLS, membatasi data untuk user yang berhasil login, dan menyediakan RPC aman untuk halaman tiket publik.
+Jalankan migration secara berurutan, termasuk `002_secure_admin_and_invitation_status.sql`, `003_restrict_admin_access.sql`, dan `005_add_email_to_attendees.sql`. Migration ini mengaktifkan RLS, membatasi data untuk user yang berhasil login, dan menyediakan RPC aman untuk halaman tiket publik.
 
 Buat user admin melalui Supabase Dashboard pada **Authentication > Users**, lalu gunakan email dan password tersebut di `/admin/login`. Semua user yang berhasil login akan dapat mengelola presensi. Aktifkan Realtime untuk tabel `attendees` jika ingin perubahan data langsung terlihat di dashboard admin.
 
-Undangan tetap memakai link `wa.me`: setelah data tersimpan, browser membuka pesan yang sudah terisi dan status dicatat sebagai `opened` ketika tab WhatsApp berhasil dibuka.
+Undangan dikirim melalui WhatsApp. Admin memasukkan nomor WhatsApp saat membuat undangan, lalu aplikasi membuka `wa.me` dengan pesan dan link e-pass yang sudah terisi. Tidak diperlukan Resend, Brevo, domain, atau secret tambahan.
+
+Di tab **Daftar Hadir**, gunakan **Import Excel** untuk memasukkan banyak undangan sekaligus. File `.xlsx` atau `.xls` harus memiliki kolom `Nama` dan `Nomor WhatsApp`; kolom `Kode Tiket` bersifat opsional. Setelah data masuk, tombol **WA** di setiap baris membuka pesan undangan personal.
 
 ---
 

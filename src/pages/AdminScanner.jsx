@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import * as XLSX from 'xlsx';
 import { supabase } from '../supabase';
 import { 
   QrCode, 
@@ -17,6 +18,9 @@ import {
   ShieldCheck,
   LogOut,
   Download,
+  Phone,
+  MessageCircle,
+  FileSpreadsheet,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -83,6 +87,7 @@ const countryCodes = [
   ['598', 'Uruguay'], ['998', 'Uzbekistan'], ['678', 'Vanuatu'], ['379', 'Vatikan'], ['58', 'Venezuela'],
   ['84', 'Vietnam'], ['681', 'Wallis dan Futuna'], ['967', 'Yaman'], ['260', 'Zambia'], ['263', 'Zimbabwe']
 ].map(([code, name]) => ({ code, name }));
+void countryCodes;
 
 export default function AdminScanner() {
   const [stats, setStats] = useState({ undanganHadir: 0, totalUndangan: 0, guestHadir: 0 });
@@ -90,8 +95,6 @@ export default function AdminScanner() {
   
   const [guestName, setGuestName] = useState('');
   const [invName, setInvName] = useState('');
-  const [invCountryCode, setInvCountryCode] = useState('62');
-  const [countrySearch, setCountrySearch] = useState('+62 Indonesia');
   const [invPhone, setInvPhone] = useState('');
   const [invCode, setInvCode] = useState('');
   const [copiedCode, setCopiedCode] = useState(null);
@@ -285,11 +288,10 @@ export default function AdminScanner() {
 
     setIsSubmitting(true);
     const code = invCode.trim() ? invCode.trim().toUpperCase() : `INV-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-    const localPhone = invPhone.replace(/\D/g, '').replace(/^0+/, '');
-    const phone = `${invCountryCode}${localPhone}`;
+    const phone = invPhone.replace(/[^\d+]/g, '').replace(/^0/, '62');
 
-    if (!/^[1-9]\d{7,14}$/.test(phone)) {
-      showToast('Nomor WhatsApp tidak valid. Gunakan +kode negara, 00kode negara, atau 08xxxxxxxxxx untuk Indonesia.', 'error');
+    if (!/^\+?\d{10,15}$/.test(phone)) {
+      showToast('Nomor WhatsApp tidak valid. Gunakan format 08... atau 628...', 'error');
       setIsSubmitting(false);
       return;
     }
@@ -306,20 +308,12 @@ export default function AdminScanner() {
       showToast(`Gagal menambahkan: ${error.message}`, 'error');
     } else {
       const invitationUrl = `${window.location.origin}/invitation?code=${code}`;
-      const message = `Hello ${invName.trim()}!\n\nYou are invited to Diponegoro International Youth Festival 2026.\n\nTicket code: ${code}\n\nOpen your digital pass here:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
-      const whatsappWindow = window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
-      if (whatsappWindow) {
-        await supabase
-          .from('attendees')
-          .update({ invitation_status: 'opened', invitation_sent_at: new Date().toISOString() })
-          .eq('ticket_code', code);
-        showToast(`Undangan untuk "${invName}" siap dikirim di WhatsApp.`);
-      } else {
-        showToast('Popup WhatsApp diblokir browser. Buka link dari daftar undangan.', 'error');
-      }
+      const message = `Hello ${invName.trim()}!\n\nYou are invited to the Diponegoro International Youth Festival 2026.\n\nTicket code: ${code}\n\nOpen your digital e-pass using this link:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
+      const whatsappUrl = `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      await supabase.from('attendees').update({ invitation_status: 'opened' }).eq('ticket_code', code);
+      showToast(`Undangan untuk "${invName}" siap dikirim via WhatsApp.`);
       setInvName('');
-      setInvCountryCode('62');
-      setCountrySearch('+62 Indonesia');
       setInvPhone('');
       setInvCode('');
       loadData();
@@ -342,6 +336,72 @@ export default function AdminScanner() {
     setTimeout(() => setCopiedCode(null), 1800);
   };
 
+  const openWhatsApp = async (attendee) => {
+    if (!attendee.phone) {
+      showToast('Nomor WhatsApp tamu belum tersedia.', 'error');
+      return;
+    }
+
+    const phone = attendee.phone.replace(/[^\d+]/g, '').replace(/^0/, '62');
+    const invitationUrl = `${window.location.origin}/invitation?code=${attendee.ticket_code}`;
+    const message = `Hello ${attendee.name}!\n\nYou are invited to the Diponegoro International Youth Festival 2026.\n\nTicket code: ${attendee.ticket_code}\n\nOpen your digital e-pass using this link:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
+    window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+
+    if (attendee.invitation_status !== 'opened') {
+      await supabase.from('attendees').update({ invitation_status: 'opened' }).eq('id', attendee.id);
+      setRecentAttendees((items) => items.map((item) => (
+        item.id === attendee.id ? { ...item, invitation_status: 'opened' } : item
+      )));
+    }
+  };
+
+  const importExcel = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setIsSubmitting(true);
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+      const attendees = rows
+        .map((row, index) => {
+          const normalized = Object.fromEntries(
+            Object.entries(row).map(([key, value]) => [key.trim().toLowerCase(), String(value).trim()])
+          );
+          const name = normalized.nama || normalized.name;
+          const rawPhone = normalized['nomor whatsapp'] || normalized.whatsapp || normalized.phone || normalized.telepon;
+          const phone = rawPhone?.replace(/[^\d+]/g, '').replace(/^0/, '62');
+          const ticketCode = (normalized['kode tiket'] || normalized.ticket_code || '').toUpperCase();
+
+          if (!name || !phone || !/^\+?\d{10,15}$/.test(phone)) {
+            throw new Error(`Baris ${index + 2}: nama atau nomor WhatsApp tidak valid.`);
+          }
+
+          return {
+            ticket_code: ticketCode || `INV-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+            name,
+            phone,
+            category: 'undangan',
+            is_checked_in: false
+          };
+        });
+
+      if (attendees.length === 0) throw new Error('File Excel tidak memiliki data.');
+      const { error } = await supabase.from('attendees').insert(attendees);
+      if (error) throw error;
+
+      showToast(`${attendees.length} undangan berhasil diimpor. Klik tombol WhatsApp pada daftar untuk mengirim.`);
+      await loadData();
+      setActiveTab('list');
+    } catch (error) {
+      showToast(`Import Excel gagal: ${error.message}`, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const filteredAttendees = recentAttendees.filter(item => 
     item.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
     item.ticket_code.toLowerCase().includes(searchFilter.toLowerCase())
@@ -355,7 +415,7 @@ export default function AdminScanner() {
   };
 
   const exportCsv = () => {
-    const headers = ['Tiket', 'Nama', 'Nomor WhatsApp', 'Kategori', 'Status Check-In', 'Status Undangan'];
+    const headers = ['Tiket', 'Nama', 'WhatsApp', 'Kategori', 'Status Check-In', 'Status Undangan'];
     const rows = recentAttendees.map((item) => [
       item.ticket_code,
       item.name,
@@ -378,17 +438,17 @@ export default function AdminScanner() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans pb-16 antialiased">
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 sm:px-8 py-3.5 shadow-xs">
+    <div className="min-h-screen bg-[#f8f7fb] text-slate-800 font-sans pb-16 antialiased">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#492e6e]/10 px-4 sm:px-8 py-3.5 shadow-[0_8px_30px_rgba(73,46,110,0.08)]">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-indigo-700 via-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-              <Sparkles className="w-5 h-5 text-amber-300" />
+            <div className="h-10 w-10 rounded-2xl bg-white border border-[#ffb800]/50 flex items-center justify-center shadow-md shadow-[#492e6e]/15 overflow-hidden">
+              <img src="/diyf-logo.png" alt="DIYF" className="h-full w-full object-contain p-1" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-black tracking-tight text-slate-900 text-base">DIYF Attendance</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40 uppercase">
                   Admin Deck
                 </span>
               </div>
@@ -401,7 +461,7 @@ export default function AdminScanner() {
               onClick={() => setSoundEnabled(!soundEnabled)} 
               className={`p-2 sm:px-3 sm:py-2 rounded-xl border transition-all text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
                 soundEnabled 
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                  ? 'bg-[#ffb800]/15 border-[#ffb800]/40 text-[#492e6e]'
                   : 'bg-white border-slate-200 text-slate-400'
               }`}
             >
@@ -433,7 +493,7 @@ export default function AdminScanner() {
           <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Tamu Undangan</span>
-              <span className="p-2 rounded-xl bg-indigo-50 text-indigo-600"><Users className="w-4 h-4" /></span>
+              <span className="p-2 rounded-xl bg-[#492e6e]/10 text-[#492e6e]"><Users className="w-4 h-4" /></span>
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900">{stats.undanganHadir}</span>
@@ -441,7 +501,7 @@ export default function AdminScanner() {
             </div>
             <div className="w-full bg-slate-100 rounded-full h-2 mt-4 overflow-hidden">
               <div 
-                className="bg-indigo-600 h-full rounded-full transition-all duration-500"
+                className="bg-[#ffb800] h-full rounded-full transition-all duration-500"
                 style={{ width: `${stats.totalUndangan > 0 ? (stats.undanganHadir / stats.totalUndangan) * 100 : 0}%` }}
               />
             </div>
@@ -450,21 +510,21 @@ export default function AdminScanner() {
           <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Guest Walk-In</span>
-              <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600"><UserPlus className="w-4 h-4" /></span>
+              <span className="p-2 rounded-xl bg-[#ffb800]/15 text-[#492e6e]"><UserPlus className="w-4 h-4" /></span>
             </div>
             <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl font-black text-emerald-600">{stats.guestHadir}</span>
+              <span className="text-3xl font-black text-[#492e6e]">{stats.guestHadir}</span>
               <span className="text-xs font-semibold text-slate-500">tamu on-site</span>
             </div>
             <div className="mt-4 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Meja registrasi langsung
+              <span className="w-2 h-2 rounded-full bg-[#ffb800] animate-pulse"></span> Meja registrasi langsung
             </div>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Total Kehadiran</span>
-              <span className="p-2 rounded-xl bg-violet-50 text-violet-600"><ShieldCheck className="w-4 h-4" /></span>
+              <span className="p-2 rounded-xl bg-[#492e6e]/10 text-[#492e6e]"><ShieldCheck className="w-4 h-4" /></span>
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900">{stats.undanganHadir + stats.guestHadir}</span>
@@ -492,11 +552,11 @@ export default function AdminScanner() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                     isActive 
-                      ? 'bg-white text-indigo-700 shadow-sm' 
+                      ? 'bg-[#492e6e] text-white shadow-md shadow-[#492e6e]/20'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-600' : 'text-slate-500'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#ffb800]' : 'text-slate-500'}`} />
                   {tab.label}
                 </button>
               );
@@ -505,18 +565,18 @@ export default function AdminScanner() {
         </div>
 
         {activeTab === 'scanner' && (
-          <div className="bg-white border border-slate-200 rounded-[32px] p-6 sm:p-8 shadow-sm max-w-lg mx-auto text-center space-y-4">
+          <div className="bg-white border border-[#492e6e]/10 rounded-[32px] p-6 sm:p-8 shadow-[0_12px_40px_rgba(73,46,110,0.08)] max-w-lg mx-auto text-center space-y-4">
             <div>
               <h3 className="text-lg font-black text-slate-900">Pemindai QR Code</h3>
               <p className="text-xs text-slate-500 mt-0.5">Posisikan QR code tiket tamu di tengah area pemindaian.</p>
             </div>
 
-            <div className="rounded-2xl overflow-hidden border border-slate-200 bg-black shadow-inner">
+            <div className="rounded-2xl overflow-hidden border-4 border-[#ffb800]/70 bg-[#492e6e] shadow-inner">
               <div id="reader" className="w-full"></div>
             </div>
 
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40 text-xs font-bold">
+              <span className="w-2 h-2 rounded-full bg-[#ffb800] animate-pulse"></span>
               Kamera Aktif Otomatis
             </div>
           </div>
@@ -525,7 +585,7 @@ export default function AdminScanner() {
         {activeTab === 'guest' && (
           <div className="bg-white border border-slate-200 rounded-[32px] p-6 sm:p-8 shadow-sm max-w-md mx-auto">
             <div className="mb-6">
-              <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40">
                 Meja Registrasi
               </span>
               <h3 className="text-lg font-black text-slate-900 mt-2">Registrasi Cepat Tamu Walk-In</h3>
@@ -543,16 +603,16 @@ export default function AdminScanner() {
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
                   placeholder="Ketik nama lengkap..."
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm transition"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white text-sm transition"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting || !guestName.trim()}
-                className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-sm transition disabled:opacity-50 text-xs flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3.5 bg-[#492e6e] hover:bg-[#392354] text-white font-bold rounded-xl shadow-lg shadow-[#492e6e]/20 transition disabled:opacity-50 text-xs flex items-center justify-center gap-2 cursor-pointer"
               >
-                <UserPlus className="w-4 h-4 text-emerald-400" />
+                <UserPlus className="w-4 h-4 text-[#ffb800]" />
                 {isSubmitting ? 'Memproses...' : 'Konfirmasi Masuk'}
               </button>
             </form>
@@ -562,7 +622,7 @@ export default function AdminScanner() {
         {activeTab === 'tambah_undangan' && (
           <div className="bg-white border border-slate-200 rounded-[32px] p-6 sm:p-8 shadow-sm max-w-md mx-auto">
             <div className="mb-6">
-              <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+              <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-[#492e6e]/10 text-[#492e6e] border border-[#492e6e]/20">
                 Pra-Acara
               </span>
               <h3 className="text-lg font-black text-slate-900 mt-2">Buat Undangan VIP/Tamu</h3>
@@ -580,44 +640,24 @@ export default function AdminScanner() {
                   value={invName}
                   onChange={(e) => setInvName(e.target.value)}
                   placeholder="Contoh: Bpk. Bambang Wijaya"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm transition"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white text-sm transition"
                 />
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">Nomor WhatsApp *</label>
-                <div className="flex gap-2">
-                  <div className="w-44 shrink-0">
-                    <input
-                      list="country-code-options"
-                      value={countrySearch}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setCountrySearch(value);
-                        const selectedCountry = countryCodes.find(({ code, name }) => value === `+${code} ${name}`);
-                        if (selectedCountry) setInvCountryCode(selectedCountry.code);
-                      }}
-                      aria-label="Cari kode negara"
-                      placeholder="Cari negara..."
-                      className="w-full px-3 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm transition"
-                    />
-                    <datalist id="country-code-options">
-                      {countryCodes.map(({ code, name }) => (
-                        <option key={`${code}-${name}`} value={`+${code} ${name}`} />
-                      ))}
-                    </datalist>
-                  </div>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
                     type="tel"
                     required
                     value={invPhone}
                     onChange={(e) => setInvPhone(e.target.value)}
-                    placeholder="81234567890"
-                    inputMode="tel"
-                    className="min-w-0 flex-1 px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm transition"
+                    placeholder="081234567890"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white text-sm transition"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1.5">Pilih kode negara, lalu masukkan nomor tanpa kode negara.</p>
+                <p className="text-[11px] text-slate-400 mt-1.5">WhatsApp akan dibuka dengan pesan undangan yang sudah terisi.</p>
               </div>
 
               <div>
@@ -627,14 +667,14 @@ export default function AdminScanner() {
                   value={invCode}
                   onChange={(e) => setInvCode(e.target.value)}
                   placeholder="Kosongkan untuk otomatis (misal: INV-7K9A)"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-sm transition"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white text-sm transition"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting || !invName.trim() || !invPhone.trim()}
-                className="w-full py-3.5 bg-gradient-to-tr from-indigo-700 to-indigo-600 hover:from-indigo-600 hover:to-indigo-500 text-white font-bold rounded-xl shadow-sm transition disabled:opacity-50 text-xs flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3.5 bg-gradient-to-tr from-[#492e6e] to-[#6d4792] hover:from-[#392354] hover:to-[#492e6e] text-white font-bold rounded-xl shadow-lg shadow-[#492e6e]/20 transition disabled:opacity-50 text-xs flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
                 {isSubmitting ? 'Membuat Tiket...' : 'Simpan & Generate Tiket'}
@@ -648,7 +688,7 @@ export default function AdminScanner() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="font-black text-slate-900 text-base">Rekapitulasi Kehadiran</h3>
-                <p className="text-xs text-slate-500">Salin link undangan WhatsApp atau kelola entri tamu</p>
+                <p className="text-xs text-slate-500">Kelola undangan WhatsApp atau entri tamu</p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <div className="relative w-full sm:w-72">
@@ -658,9 +698,14 @@ export default function AdminScanner() {
                     value={searchFilter}
                     onChange={handleSearchChange}
                     placeholder="Cari nama atau kode tiket..."
-                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white transition"
                   />
                 </div>
+                <label className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#492e6e] hover:bg-[#392354] text-white text-xs font-bold cursor-pointer shadow-sm">
+                  <FileSpreadsheet className="w-4 h-4 text-[#ffb800]" />
+                  Import Excel
+                  <input type="file" accept=".xlsx,.xls" onChange={importExcel} disabled={isSubmitting} className="hidden" />
+                </label>
                 <button onClick={exportCsv} className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700">
                   <Download className="w-4 h-4" /> Export CSV
                 </button>
@@ -692,16 +737,16 @@ export default function AdminScanner() {
                         <td className="py-3.5 px-4">
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${
                             item.category === 'undangan' 
-                              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' 
-                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              ? 'bg-[#492e6e]/10 text-[#492e6e] border border-[#492e6e]/20'
+                              : 'bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40'
                           }`}>
                             {item.category}
                           </span>
                         </td>
                         <td className="py-3.5 px-4">
                           {item.is_checked_in ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Hadir
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40">
+                              <CheckCircle2 className="w-3 h-3 text-[#492e6e]" /> Hadir
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200">
@@ -711,7 +756,7 @@ export default function AdminScanner() {
                         </td>
                         <td className="py-3.5 px-4">
                           {item.category === 'undangan' ? (
-                            <span className={`text-[10px] font-bold uppercase ${item.invitation_status === 'opened' || item.invitation_status === 'sent' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                            <span className={`text-[10px] font-bold uppercase ${item.invitation_status === 'opened' || item.invitation_status === 'sent' ? 'text-[#492e6e]' : 'text-slate-400'}`}>
                               {item.invitation_status === 'opened' ? 'Link dibuka' : item.invitation_status === 'sent' ? 'Terkirim' : 'Belum dikirim'}
                             </span>
                           ) : <span className="text-slate-300">-</span>}
@@ -720,14 +765,24 @@ export default function AdminScanner() {
                           <div className="flex items-center justify-center gap-1.5">
                             {item.category === 'undangan' && (
                               <button
+                                onClick={() => openWhatsApp(item)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#1ebe5d] text-white text-[11px] font-bold shadow-sm transition cursor-pointer"
+                                title="Kirim undangan via WhatsApp"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                WA
+                              </button>
+                            )}
+                            {item.category === 'undangan' && (
+                              <button
                                 onClick={() => copyLink(item.ticket_code)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-400 bg-white text-[11px] font-semibold text-slate-700 shadow-xs transition cursor-pointer"
-                                title="Salin Link WhatsApp"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-[#ffb800] bg-white text-[11px] font-semibold text-slate-700 shadow-xs transition cursor-pointer"
+                                title="Salin Link Undangan"
                               >
                                 {copiedCode === item.ticket_code ? (
                                   <>
-                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                    <span className="text-emerald-600">Disalin!</span>
+                                    <Check className="w-3.5 h-3.5 text-[#492e6e]" />
+                                    <span className="text-[#492e6e]">Disalin!</span>
                                   </>
                                 ) : (
                                   <>
