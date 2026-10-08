@@ -307,8 +307,8 @@ export default function AdminScanner() {
     if (error) {
       showToast(`Gagal menambahkan: ${error.message}`, 'error');
     } else {
-      const invitationUrl = `${window.location.origin}/invitation?code=${code}`;
-      const message = `Hello ${invName.trim()}!\n\nYou are invited to the Diponegoro International Youth Festival 2026.\n\nTicket code: ${code}\n\nOpen your digital e-pass using this link:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
+      const invitationUrl = new URL(`/invitation?code=${encodeURIComponent(code)}`, window.location.origin).href;
+      const message = `Hello ${invName.trim()}!\n\nYou are invited to the Diponegoro International Youth Festival 2026.\n\nTicket code: ${code}\n\nTicket link:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
       const whatsappUrl = `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
       await supabase.from('attendees').update({ invitation_status: 'opened' }).eq('ticket_code', code);
@@ -343,8 +343,8 @@ export default function AdminScanner() {
     }
 
     const phone = attendee.phone.replace(/[^\d+]/g, '').replace(/^0/, '62');
-    const invitationUrl = `${window.location.origin}/invitation?code=${attendee.ticket_code}`;
-    const message = `Hello ${attendee.name}!\n\nYou are invited to the Diponegoro International Youth Festival 2026.\n\nTicket code: ${attendee.ticket_code}\n\nOpen your digital e-pass using this link:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
+    const invitationUrl = new URL(`/invitation?code=${encodeURIComponent(attendee.ticket_code)}`, window.location.origin).href;
+    const message = `Hello ${attendee.name}!\n\nYou are invited to the Diponegoro International Youth Festival 2026.\n\nTicket code: ${attendee.ticket_code}\n\nTicket link:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
     window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
 
     if (attendee.invitation_status !== 'opened') {
