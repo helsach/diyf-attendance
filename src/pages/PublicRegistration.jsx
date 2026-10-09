@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { CheckCircle2, Phone, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Phone, Sparkles } from 'lucide-react';
 import { supabase } from '../supabase';
 
 const createTicketCode = () => `INV-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
 
 export default function PublicRegistration() {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [ticketCode, setTicketCode] = useState('');
-  const [submittedName, setSubmittedName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -16,9 +16,7 @@ export default function PublicRegistration() {
     event.preventDefault();
     const trimmedName = name.trim();
     const normalizedPhone = phone.replace(/[^\d+]/g, '').replace(/^0/, '62');
-    const code = ticketCode.trim()
-      ? ticketCode.trim().toUpperCase()
-      : createTicketCode();
+    const code = createTicketCode();
 
     if (!trimmedName || !phone.trim()) return;
 
@@ -40,40 +38,13 @@ export default function PublicRegistration() {
 
     if (insertError) {
       setError(insertError.code === '23505'
-        ? 'This ticket code is already in use. Please choose another one.'
+        ? 'A ticket could not be generated. Please submit again.'
         : `Registration failed: ${insertError.message}`);
     } else {
-      setSubmittedName(trimmedName);
-      setName('');
-      setPhone('');
-      setTicketCode('');
+      navigate(`/invitation?code=${encodeURIComponent(code)}`);
     }
     setIsSubmitting(false);
   };
-
-  if (submittedName) {
-    return (
-      <main className="min-h-screen bg-gradient-to-br from-[#392354] via-[#492e6e] to-[#241533] flex items-center justify-center p-5">
-        <section className="w-full max-w-md rounded-[32px] bg-white p-7 text-center shadow-2xl shadow-black/25">
-          <img src="/diyf-logo.png" alt="DIYF" className="mx-auto h-14 w-14 rounded-2xl bg-white object-contain p-1 shadow-md ring-1 ring-[#492e6e]/10" />
-          <div className="mx-auto mt-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#ffb800]/20 text-[#492e6e]">
-            <CheckCircle2 className="h-7 w-7" />
-          </div>
-          <h1 className="mt-5 text-xl font-black text-slate-900">Registration Submitted</h1>
-          <p className="mt-2 text-sm leading-relaxed text-slate-500">
-            Thank you, <strong className="text-slate-700">{submittedName}</strong>. The committee will review your registration and send your invitation details.
-          </p>
-          <button
-            type="button"
-            onClick={() => setSubmittedName('')}
-            className="mt-6 w-full rounded-xl bg-[#492e6e] py-3 text-xs font-bold text-white transition hover:bg-[#392354]"
-          >
-            Register Another Guest
-          </button>
-        </section>
-      </main>
-    );
-  }
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#392354] via-[#492e6e] to-[#241533] p-5">
@@ -119,17 +90,6 @@ export default function PublicRegistration() {
                 className="w-full rounded-xl border border-slate-300 bg-slate-50 py-3 pl-10 pr-4 text-sm font-normal text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#ffb800]"
               />
             </span>
-          </label>
-
-          <label className="block text-xs font-bold text-slate-700">
-            Ticket Code (Optional)
-            <input
-              type="text"
-              value={ticketCode}
-              onChange={(event) => setTicketCode(event.target.value)}
-              placeholder="Leave blank to generate automatically"
-              className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 font-mono text-sm font-normal uppercase text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#ffb800]"
-            />
           </label>
 
           {error && <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">{error}</p>}

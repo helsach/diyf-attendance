@@ -189,6 +189,10 @@ export default function Invitation() {
             Save Ticket to Device
           </button>
 
+          <div className="rounded-xl border border-[#ffb800]/50 bg-[#ffb800]/10 px-3 py-2.5 text-[11px] font-bold leading-relaxed text-[#492e6e]">
+            Please save this ticket and keep the QR code ready for check-in.
+          </div>
+
           <div className="pt-2 border-t border-[#492e6e]/10 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
             <ShieldCheck className="w-3.5 h-3.5 text-[#492e6e] shrink-0" />
             Present this QR code at the check-in desk upon arrival
