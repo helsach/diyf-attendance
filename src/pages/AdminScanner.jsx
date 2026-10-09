@@ -88,6 +88,8 @@ const countryCodes = [
   ['84', 'Vietnam'], ['681', 'Wallis dan Futuna'], ['967', 'Yaman'], ['260', 'Zambia'], ['263', 'Zimbabwe']
 ].map(([code, name]) => ({ code, name }));
 void countryCodes;
+const SHARED_INVITATION_CODE = 'DIYF-GUEST';
+const SHARED_GUEST_URL = `${window.location.origin}/guest-checkin`;
 
 export default function AdminScanner() {
   const [stats, setStats] = useState({ undanganHadir: 0, totalUndangan: 0, guestHadir: 0 });
@@ -108,6 +110,10 @@ export default function AdminScanner() {
   const toastTimerRef = useRef(null);
   const [toast, setToast] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sharedScanOpen, setSharedScanOpen] = useState(false);
+  const [sharedSearch, setSharedSearch] = useState('');
+  const [sharedSelectedId, setSharedSelectedId] = useState(null);
+  const [sharedCheckInLoading, setSharedCheckInLoading] = useState(false);
   const pageSize = 10;
 
   useEffect(() => {
@@ -173,6 +179,20 @@ export default function AdminScanner() {
       const code = decodedText.trim();
 
       try {
+        if (code === SHARED_GUEST_URL) {
+          playTone(920, 0.2, soundEnabledRef.current);
+          showToast('QR guest terdeteksi. Minta tamu membuka QR ini dari HP mereka.', 'warning');
+          return;
+        }
+
+        if (code.toUpperCase() === SHARED_INVITATION_CODE) {
+          setSharedScanOpen(true);
+          setSharedSearch('');
+          setSharedSelectedId(null);
+          playTone(920, 0.2, soundEnabledRef.current);
+          return;
+        }
+
         const { data, error } = await supabase
           .from('attendees')
           .select('*')
@@ -255,6 +275,44 @@ export default function AdminScanner() {
     };
   }, [activeTab]);
 
+  const sharedSearchResults = recentAttendees.filter((attendee) => (
+    attendee.category === 'undangan' &&
+    attendee.name.toLowerCase().includes(sharedSearch.toLowerCase().trim())
+  ));
+
+  const handleSharedCheckIn = async () => {
+    if (!sharedSelectedId) return;
+
+    setSharedCheckInLoading(true);
+    const selectedAttendee = recentAttendees.find((attendee) => attendee.id === sharedSelectedId);
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('attendees')
+      .update({ is_checked_in: true, checked_in_at: now })
+      .eq('id', sharedSelectedId)
+      .eq('category', 'undangan')
+      .eq('is_checked_in', false)
+      .select()
+      .single();
+
+    if (error || !data) {
+      playTone(420, 0.35, soundEnabledRef.current);
+      showToast(
+        selectedAttendee?.is_checked_in
+          ? `${selectedAttendee.name} sudah check-in sebelumnya.`
+          : 'Nama tersebut baru saja diproses oleh perangkat lain.',
+        'warning'
+      );
+    } else {
+      playTone(920, 0.2, soundEnabledRef.current);
+      showToast(`Presensi sukses. Selamat datang, ${data.name}!`);
+      setSharedSearch('');
+      setSharedSelectedId(null);
+      await loadData();
+    }
+    setSharedCheckInLoading(false);
+  };
+
   const handleGuestSubmit = async (e) => {
     e.preventDefault();
     if (!guestName.trim()) return;
@@ -280,6 +338,27 @@ export default function AdminScanner() {
       showToast(`Gagal mencatat tamu: ${error.message}`, 'error');
     }
     setIsSubmitting(false);
+  };
+
+  const handleConfirmGuest = async (attendee) => {
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('attendees')
+      .update({ is_checked_in: true, checked_in_at: now })
+      .eq('id', attendee.id)
+      .eq('category', 'guest')
+      .eq('is_checked_in', false)
+      .select()
+      .single();
+
+    if (error || !data) {
+      showToast(`${attendee.name} sudah diproses atau tidak dapat dikonfirmasi.`, 'warning');
+      return;
+    }
+
+    playTone(920, 0.2, soundEnabledRef.current);
+    showToast(`Presensi guest dikonfirmasi: ${data.name}.`);
+    loadData();
   };
 
   const handleAddUndangan = async (e) => {
@@ -579,6 +658,88 @@ export default function AdminScanner() {
               <span className="w-2 h-2 rounded-full bg-[#ffb800] animate-pulse"></span>
               Kamera Aktif Otomatis
             </div>
+
+            <div className="border-t border-slate-100 pt-4">
+              <p className="text-xs font-bold text-slate-700">QR Guest Bersama</p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Buka halaman khusus ini untuk ditampilkan di layar atau dicetak.
+              </p>
+              <a
+                href="/guest-qr"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex mt-3 items-center justify-center px-4 py-2.5 rounded-xl bg-[#492e6e] hover:bg-[#392354] text-white text-xs font-bold transition"
+              >
+                Buka Halaman QR Guest
+              </a>
+            </div>
+
+            {sharedScanOpen && (
+              <div className="border-t border-slate-200 pt-4 text-left">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900">Pilih Nama Tamu</h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Cari nama yang datang, lalu konfirmasi.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSharedScanOpen(false);
+                      setSharedSearch('');
+                      setSharedSelectedId(null);
+                    }}
+                    className="text-[11px] font-bold text-slate-400 hover:text-slate-700"
+                  >
+                    Tutup
+                  </button>
+                </div>
+
+                <div className="relative mt-3">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="search"
+                    value={sharedSearch}
+                    onChange={(event) => setSharedSearch(event.target.value)}
+                    placeholder="Ketik nama tamu..."
+                    autoFocus
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white"
+                  />
+                </div>
+
+                <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
+                  {sharedSearchResults.length === 0 ? (
+                    <p className="py-4 text-center text-[11px] text-slate-400">Nama tidak ditemukan.</p>
+                  ) : (
+                    sharedSearchResults.map((attendee) => (
+                      <button
+                        type="button"
+                        key={attendee.id}
+                        onClick={() => setSharedSelectedId(attendee.id)}
+                        className={`w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-xs transition ${
+                          sharedSelectedId === attendee.id
+                            ? 'bg-[#492e6e] text-white'
+                            : 'bg-slate-50 hover:bg-[#492e6e]/10 text-slate-800'
+                        }`}
+                      >
+                        <span className="font-bold">{attendee.name}</span>
+                        <span className={`text-[10px] font-bold ${sharedSelectedId === attendee.id ? 'text-[#ffda70]' : attendee.is_checked_in ? 'text-emerald-600' : 'text-slate-400'}`}>
+                          {attendee.is_checked_in ? 'Sudah hadir' : 'Menunggu'}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSharedCheckIn}
+                  disabled={!sharedSelectedId || sharedCheckInLoading || recentAttendees.find((attendee) => attendee.id === sharedSelectedId)?.is_checked_in}
+                  className="w-full mt-3 py-3 bg-[#492e6e] hover:bg-[#392354] text-white font-bold rounded-xl text-xs transition disabled:opacity-50"
+                >
+                  {sharedCheckInLoading ? 'Memproses...' : 'Konfirmasi Hadir'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -790,6 +951,16 @@ export default function AdminScanner() {
                                     Link
                                   </>
                                 )}
+                              </button>
+                            )}
+                            {item.category === 'guest' && !item.is_checked_in && (
+                              <button
+                                onClick={() => handleConfirmGuest(item)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#492e6e] hover:bg-[#392354] text-white text-[11px] font-bold shadow-sm transition cursor-pointer"
+                                title="Konfirmasi kehadiran guest"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#ffb800]" />
+                                Konfirmasi
                               </button>
                             )}
 
