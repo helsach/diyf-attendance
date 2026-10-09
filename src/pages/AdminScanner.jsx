@@ -495,27 +495,52 @@ export default function AdminScanner() {
     setCurrentPage(1);
   };
 
-  const exportCsv = () => {
-    const headers = ['Ticket', 'Name', 'WhatsApp', 'Category', 'Check-In Status', 'Invitation Status'];
-    const rows = recentAttendees.map((item) => [
-      item.ticket_code,
-      item.name,
-      item.phone ?? '',
-      item.category,
-      item.is_checked_in ? 'Checked In' : 'Pending',
-      item.invitation_status ?? 'pending'
-    ]);
-    const csv = [headers, ...rows]
-      .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `rekap-kehadiran-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    showToast('Attendance CSV downloaded successfully.');
+  const exportExcel = () => {
+    const attendanceRows = recentAttendees.map((item, index) => ({
+      No: index + 1,
+      'Ticket Code': item.ticket_code,
+      'Full Name': item.name,
+      'WhatsApp Number': item.phone ?? '',
+      Category: item.category,
+      'Check-In Status': item.is_checked_in ? 'Checked In' : 'Pending',
+      'Invitation Status': item.invitation_status ?? 'Pending'
+    }));
+    const checkedInCount = recentAttendees.filter((item) => item.is_checked_in).length;
+    const categoryCounts = recentAttendees.reduce((counts, item) => {
+      counts[item.category] = (counts[item.category] || 0) + 1;
+      return counts;
+    }, {});
+    const summaryRows = [
+      { Metric: 'Total Attendees', Value: recentAttendees.length },
+      { Metric: 'Checked In', Value: checkedInCount },
+      { Metric: 'Pending Check-In', Value: recentAttendees.length - checkedInCount },
+      ...Object.entries(categoryCounts).map(([category, count]) => ({
+        Metric: `Category: ${category}`,
+        Value: count
+      }))
+    ];
+    const workbook = XLSX.utils.book_new();
+    const attendanceSheet = XLSX.utils.json_to_sheet(attendanceRows);
+    const summarySheet = XLSX.utils.json_to_sheet(summaryRows);
+
+    attendanceSheet['!cols'] = [
+      { wch: 6 },
+      { wch: 18 },
+      { wch: 30 },
+      { wch: 20 },
+      { wch: 16 },
+      { wch: 18 },
+      { wch: 20 }
+    ];
+    attendanceSheet['!autofilter'] = { ref: `A1:G${Math.max(1, attendanceRows.length + 1)}` };
+    attendanceSheet['!freeze'] = { xSplit: 0, ySplit: 1 };
+    summarySheet['!cols'] = [{ wch: 24 }, { wch: 14 }];
+    summarySheet['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+    XLSX.utils.book_append_sheet(workbook, attendanceSheet, 'Attendance');
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+    XLSX.writeFile(workbook, `attendance-report-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    showToast('Attendance Excel file downloaded successfully.');
   };
 
   return (
@@ -869,8 +894,8 @@ export default function AdminScanner() {
                   Import Excel
                   <input type="file" accept=".xlsx,.xls" onChange={importExcel} disabled={isSubmitting} className="hidden" />
                 </label>
-                <button onClick={exportCsv} className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700">
-                  <Download className="w-4 h-4" /> Export CSV
+                <button onClick={exportExcel} className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700">
+                  <Download className="w-4 h-4" /> Export Excel
                 </button>
               </div>
             </div>
