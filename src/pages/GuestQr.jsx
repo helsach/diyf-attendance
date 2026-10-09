@@ -1,7 +1,8 @@
 import { QRCodeSVG } from 'qrcode.react';
 import { UserPlus } from 'lucide-react';
 
-const guestCheckInUrl = new URL('/guest-checkin', window.location.origin).href;
+const publicAppUrl = (import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin).replace(/\/$/, '');
+const registrationUrl = `${publicAppUrl}/register`;
 
 export default function GuestQr() {
   return (
@@ -18,18 +19,18 @@ export default function GuestQr() {
           </div>
         </div>
         <div className="mx-auto mt-6 h-px w-16 bg-[#ffb800]" />
-        <h1 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight text-[#492e6e]">Guest Registration</h1>
+        <h1 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight text-[#492e6e]">Public Registration</h1>
         <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-500">
-          Scan this QR code with your phone to enter your name and register your attendance.
+          Scan this QR code with your phone to register and receive your digital invitation.
         </p>
 
         <div className="mt-7 inline-block rounded-3xl border-[10px] border-[#ffb800]/70 bg-white p-4 shadow-[0_12px_35px_rgba(73,46,110,0.18)]">
-          <QRCodeSVG value={guestCheckInUrl} size={260} level="H" includeMargin />
+          <QRCodeSVG value={registrationUrl} size={260} level="H" includeMargin />
         </div>
 
         <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#492e6e]/10 px-4 py-2 text-xs font-bold text-[#492e6e]">
           <UserPlus className="h-4 w-4 text-[#d69700]" />
-          Scan to enter your name
+          Scan to register
         </div>
         <p className="mt-5 text-[10px] font-medium text-slate-400">Diponegoro International Youth Festival 2026</p>
       </section>

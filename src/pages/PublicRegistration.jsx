@@ -47,10 +47,10 @@ export default function PublicRegistration() {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#392354] via-[#492e6e] to-[#241533] p-5">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#392354] via-[#492e6e] to-[#241533] px-3 py-5 sm:p-6">
       <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-[#ffb800]/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-[#a66bd4]/20 blur-3xl" />
-      <section className="relative w-full max-w-md rounded-[32px] bg-white p-6 shadow-2xl shadow-black/25 sm:p-8">
+      <section className="relative w-full max-w-md rounded-[28px] bg-white p-5 shadow-2xl shadow-black/25 sm:rounded-[32px] sm:p-8">
         <div className="flex items-center gap-3">
           <img src="/diyf-logo.png" alt="DIYF" className="h-12 w-12 rounded-2xl bg-white object-contain p-1 shadow-md ring-1 ring-[#492e6e]/10" />
           <div>
@@ -59,8 +59,8 @@ export default function PublicRegistration() {
           </div>
         </div>
         <div className="mt-6 h-px bg-slate-100" />
-        <h1 className="mt-6 text-2xl font-black tracking-tight text-slate-900">Invitation Registration</h1>
-        <p className="mt-2 text-sm leading-relaxed text-slate-500">
+        <h1 className="mt-5 text-xl font-black tracking-tight text-slate-900 sm:mt-6 sm:text-2xl">Invitation Registration</h1>
+        <p className="mt-2 text-xs leading-relaxed text-slate-500 sm:text-sm">
           Submit your details to receive an official digital invitation.
         </p>
 

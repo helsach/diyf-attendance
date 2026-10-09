@@ -662,9 +662,9 @@ export default function AdminScanner() {
             </div>
 
             <div className="border-t border-slate-100 pt-4">
-              <p className="text-xs font-bold text-slate-700">Shared Guest QR</p>
+              <p className="text-xs font-bold text-slate-700">Public Registration QR</p>
               <p className="text-[11px] text-slate-500 mt-1">
-                Open the dedicated page to display or print this QR code.
+                Open the dedicated page to display or print the registration QR code.
               </p>
               <a
                 href="/guest-qr"
@@ -672,7 +672,7 @@ export default function AdminScanner() {
                 rel="noreferrer"
                 className="inline-flex mt-3 items-center justify-center px-4 py-2.5 rounded-xl bg-[#492e6e] hover:bg-[#392354] text-white text-xs font-bold transition"
               >
-                Open Guest QR Page
+                Open Public QR Page
               </a>
             </div>
 

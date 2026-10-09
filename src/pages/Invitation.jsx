@@ -103,35 +103,35 @@ export default function Invitation() {
       <div className="pointer-events-none absolute -bottom-40 -left-24 h-80 w-80 rounded-full bg-[#492e6e]/15 blur-3xl" />
       
       {/* Digital Boarding Pass Container */}
-      <div className="relative w-full max-w-sm rounded-[32px] bg-white shadow-2xl shadow-[#492e6e]/20 overflow-hidden border border-[#492e6e]/10 transition-all">
+      <div className="relative my-2 w-full max-w-sm overflow-hidden rounded-[28px] border border-[#492e6e]/10 bg-white shadow-2xl shadow-[#492e6e]/20 transition-all sm:my-0 sm:rounded-[32px]">
         
         {/* Header Pass */}
-        <div className="bg-gradient-to-br from-[#492e6e] via-[#57357b] to-[#392354] text-white px-6 pt-7 pb-6 relative overflow-hidden">
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#492e6e] via-[#57357b] to-[#392354] px-4 pb-5 pt-5 text-white sm:px-6 sm:pb-6 sm:pt-7">
           <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full border-[18px] border-[#ffb800]/20" />
           <div className="absolute right-7 top-8 h-3 w-3 rounded-full bg-[#ffb800]" />
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
             <img src="/diyf-logo.png" alt="DIYF" className="h-8 w-8 shrink-0 rounded-xl bg-white object-contain p-1 shadow-md" />
-            <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full bg-[#ffb800] text-[#492e6e] shadow-sm">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#ffb800] px-2 py-1 text-[9px] font-extrabold uppercase tracking-wider text-[#492e6e] shadow-sm sm:gap-1.5 sm:px-2.5 sm:text-[10px] sm:tracking-widest">
               Guest Pass
             </span>
-            <span className="ml-auto min-w-0 truncate font-mono text-xs font-bold text-[#ffda70]">{tamu.ticket_code}</span>
+            <span className="ml-auto min-w-0 truncate font-mono text-[10px] font-bold text-[#ffda70] sm:text-xs">{tamu.ticket_code}</span>
           </div>
 
-          <div className="mt-5">
-            <h1 className="text-xl font-black tracking-tight text-white leading-tight">
+          <div className="mt-4 sm:mt-5">
+            <h1 className="text-lg font-black leading-tight tracking-tight text-white sm:text-xl">
               Diponegoro International Youth Festival 2026
             </h1>
             <p className="text-xs text-[#eadcf5] mt-1">Official Entry Ticket <span className="text-[#ffb800]">•</span> E-Pass</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 mt-5 pt-4 border-t border-white/15 text-[11px] text-[#eadcf5]">
+          <div className="mt-4 grid grid-cols-1 gap-2 border-t border-white/15 pt-4 text-[10px] text-[#eadcf5] sm:mt-5 sm:grid-cols-2 sm:text-[11px]">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-[#ffb800] shrink-0" />
-              <span className="truncate">Friday, Oct 16, 2026</span>
+              <span>Friday, Oct 16, 2026</span>
             </div>
             <div className="flex items-center gap-1.5 justify-end">
               <MapPin className="w-3.5 h-3.5 text-[#ffb800] shrink-0" />
-              <span className="truncate">Widya Puraya, Undip</span>
+              <span>Widya Puraya, Undip</span>
             </div>
           </div>
         </div>
@@ -144,12 +144,12 @@ export default function Invitation() {
         </div>
 
         {/* Pass Content & QR Display */}
-        <div className="p-6 pt-1 text-center space-y-5">
+        <div className="space-y-4 p-4 pt-1 text-center sm:space-y-5 sm:p-6 sm:pt-1">
           
           <div>
             <p className="text-[10px] font-extrabold text-[#492e6e]/55 uppercase tracking-[0.2em]">Attendee Name</p>
-            <h2 className="text-xl font-black text-slate-900 mt-1 tracking-tight">{tamu.name}</h2>
-            <div className="mt-2 flex items-center justify-center gap-2">
+            <h2 className="mt-1 break-words text-lg font-black tracking-tight text-slate-900 sm:text-xl">{tamu.name}</h2>
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
               <span className="px-3 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#492e6e]/10 text-[#492e6e] border border-[#492e6e]/20">
                 {tamu.category}
               </span>
@@ -166,10 +166,10 @@ export default function Invitation() {
           </div>
 
           <div className="flex justify-center" ref={qrRef}>
-            <div className="p-4 bg-white border-4 border-[#ffb800]/70 rounded-3xl shadow-[0_8px_25px_rgba(73,46,110,0.12)] inline-block">
+            <div className="inline-block rounded-3xl border-4 border-[#ffb800]/70 bg-white p-3 shadow-[0_8px_25px_rgba(73,46,110,0.12)] sm:p-4">
               <QRCodeSVG 
                 value={tamu.ticket_code} 
-                size={190} 
+                size={180} 
                 level="H" 
                 includeMargin={false}
               />
@@ -178,7 +178,7 @@ export default function Invitation() {
 
           <div className="space-y-1">
             <span className="text-[10px] uppercase font-extrabold text-[#492e6e]/55 tracking-[0.2em]">Passcode ID</span>
-            <p className="font-mono font-black text-[#492e6e] tracking-widest text-base">{tamu.ticket_code}</p>
+            <p className="break-all font-mono text-sm font-black tracking-widest text-[#492e6e] sm:text-base">{tamu.ticket_code}</p>
           </div>
 
           <button
