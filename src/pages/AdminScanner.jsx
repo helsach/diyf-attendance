@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   LogOut,
   Download,
+  ExternalLink,
   Phone,
   MessageCircle,
   FileSpreadsheet,
@@ -89,7 +90,8 @@ const countryCodes = [
 ].map(([code, name]) => ({ code, name }));
 void countryCodes;
 const SHARED_INVITATION_CODE = 'DIYF-GUEST';
-const SHARED_GUEST_URL = `${window.location.origin}/guest-checkin`;
+const PUBLIC_APP_URL = (import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin).replace(/\/$/, '');
+const SHARED_GUEST_URL = `${PUBLIC_APP_URL}/guest-checkin`;
 
 export default function AdminScanner() {
   const [stats, setStats] = useState({ undanganHadir: 0, totalUndangan: 0, guestHadir: 0 });
@@ -386,8 +388,8 @@ export default function AdminScanner() {
     if (error) {
       showToast(`Failed to add invitation: ${error.message}`, 'error');
     } else {
-      const invitationUrl = new URL(`/invitation?code=${encodeURIComponent(code)}`, window.location.origin).href;
-      const message = `Hello ${invName.trim()}!\n\nYou are invited to the Diponegoro International Youth Festival 2026.\n\nTicket code: ${code}\n\nTicket link:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
+      const invitationUrl = `${PUBLIC_APP_URL}/invitation?code=${encodeURIComponent(code)}`;
+      const message = `Hello ${invName.trim()}!\n\nYou are invited to the Diponegoro International Youth Festival 2026.\n\nTicket code: ${code}\n\nOpen your invitation here:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
       const whatsappUrl = `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
       await supabase.from('attendees').update({ invitation_status: 'opened' }).eq('ticket_code', code);
@@ -409,7 +411,7 @@ export default function AdminScanner() {
   };
 
   const copyLink = (ticketCode) => {
-    const url = `${window.location.origin}/invitation?code=${ticketCode}`;
+    const url = `${PUBLIC_APP_URL}/invitation?code=${encodeURIComponent(ticketCode)}`;
     navigator.clipboard.writeText(url);
     setCopiedCode(ticketCode);
     setTimeout(() => setCopiedCode(null), 1800);
@@ -422,8 +424,8 @@ export default function AdminScanner() {
     }
 
     const phone = attendee.phone.replace(/[^\d+]/g, '').replace(/^0/, '62');
-    const invitationUrl = new URL(`/invitation?code=${encodeURIComponent(attendee.ticket_code)}`, window.location.origin).href;
-    const message = `Hello ${attendee.name}!\n\nYou are invited to the Diponegoro International Youth Festival 2026.\n\nTicket code: ${attendee.ticket_code}\n\nTicket link:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
+    const invitationUrl = `${PUBLIC_APP_URL}/invitation?code=${encodeURIComponent(attendee.ticket_code)}`;
+    const message = `Hello ${attendee.name}!\n\nYou are invited to the Diponegoro International Youth Festival 2026.\n\nTicket code: ${attendee.ticket_code}\n\nOpen your invitation here:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
     window.open(`https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
 
     if (attendee.invitation_status !== 'opened') {
@@ -924,6 +926,18 @@ export default function AdminScanner() {
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <div className="flex items-center justify-center gap-1.5">
+                            {item.category === 'undangan' && (
+                              <a
+                                href={`${PUBLIC_APP_URL}/invitation?code=${encodeURIComponent(item.ticket_code)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#492e6e] hover:bg-[#392354] text-white text-[11px] font-bold shadow-sm transition"
+                                title="Open invitation link"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 text-[#ffb800]" />
+                                Open
+                              </a>
+                            )}
                             {item.category === 'undangan' && (
                               <button
                                 onClick={() => openWhatsApp(item)}
