@@ -181,7 +181,7 @@ export default function AdminScanner() {
       try {
         if (code === SHARED_GUEST_URL) {
           playTone(920, 0.2, soundEnabledRef.current);
-          showToast('QR guest terdeteksi. Minta tamu membuka QR ini dari HP mereka.', 'warning');
+          showToast('Guest QR detected. Ask the guest to open this QR code on their phone.', 'warning');
           return;
         }
 
@@ -201,13 +201,13 @@ export default function AdminScanner() {
 
         if (error || !data) {
           playTone(280, 0.3, soundEnabledRef.current);
-          showToast(`QR tidak terdaftar: kode "${code}" tidak ditemukan.`, 'error');
+          showToast(`Unregistered QR: code "${code}" was not found.`, 'error');
           return;
         }
 
         if (data.is_checked_in) {
           playTone(420, 0.35, soundEnabledRef.current);
-          showToast(`${data.name} sudah check-in sebelumnya.`, 'warning');
+          showToast(`${data.name} has already checked in.`, 'warning');
           return;
         }
 
@@ -222,12 +222,12 @@ export default function AdminScanner() {
 
         if (checkInError || !checkedInAttendee) {
           playTone(420, 0.35, soundEnabledRef.current);
-          showToast(`${data.name} baru saja diproses oleh perangkat lain.`, 'warning');
+          showToast(`${data.name} was just processed by another device.`, 'warning');
           return;
         }
 
         playTone(920, 0.2, soundEnabledRef.current);
-        showToast(`Presensi sukses. Selamat datang, ${checkedInAttendee.name}!`);
+        showToast(`Check-in successful. Welcome, ${checkedInAttendee.name}!`);
         loadData();
       } finally {
         scanInProgressRef.current = false;
@@ -256,7 +256,7 @@ export default function AdminScanner() {
         isRunning = true;
       } catch (err) {
         if (!isCancelled) {
-          console.error('Gagal mengakses sensor kamera:', err);
+          console.error('Failed to access the camera sensor:', err);
         }
       }
     };
@@ -299,13 +299,13 @@ export default function AdminScanner() {
       playTone(420, 0.35, soundEnabledRef.current);
       showToast(
         selectedAttendee?.is_checked_in
-          ? `${selectedAttendee.name} sudah check-in sebelumnya.`
-          : 'Nama tersebut baru saja diproses oleh perangkat lain.',
+          ? `${selectedAttendee.name} has already checked in.`
+          : 'This name was just processed by another device.',
         'warning'
       );
     } else {
       playTone(920, 0.2, soundEnabledRef.current);
-      showToast(`Presensi sukses. Selamat datang, ${data.name}!`);
+      showToast(`Check-in successful. Welcome, ${data.name}!`);
       setSharedSearch('');
       setSharedSelectedId(null);
       await loadData();
@@ -331,11 +331,11 @@ export default function AdminScanner() {
 
     if (!error) {
       playTone(920, 0.15, soundEnabledRef.current);
-      showToast(`Tamu "${guestName}" berhasil dicatat.`);
+      showToast(`Guest "${guestName}" was recorded successfully.`);
       setGuestName('');
       loadData();
     } else {
-      showToast(`Gagal mencatat tamu: ${error.message}`, 'error');
+      showToast(`Failed to record guest: ${error.message}`, 'error');
     }
     setIsSubmitting(false);
   };
@@ -352,12 +352,12 @@ export default function AdminScanner() {
       .single();
 
     if (error || !data) {
-      showToast(`${attendee.name} sudah diproses atau tidak dapat dikonfirmasi.`, 'warning');
+      showToast(`${attendee.name} was already processed or could not be confirmed.`, 'warning');
       return;
     }
 
     playTone(920, 0.2, soundEnabledRef.current);
-    showToast(`Presensi guest dikonfirmasi: ${data.name}.`);
+    showToast(`Guest check-in confirmed: ${data.name}.`);
     loadData();
   };
 
@@ -370,7 +370,7 @@ export default function AdminScanner() {
     const phone = invPhone.replace(/[^\d+]/g, '').replace(/^0/, '62');
 
     if (!/^\+?\d{10,15}$/.test(phone)) {
-      showToast('Nomor WhatsApp tidak valid. Gunakan format 08... atau 628...', 'error');
+      showToast('Invalid WhatsApp number. Use the 08... or 628... format.', 'error');
       setIsSubmitting(false);
       return;
     }
@@ -384,14 +384,14 @@ export default function AdminScanner() {
     }]);
 
     if (error) {
-      showToast(`Gagal menambahkan: ${error.message}`, 'error');
+      showToast(`Failed to add invitation: ${error.message}`, 'error');
     } else {
       const invitationUrl = new URL(`/invitation?code=${encodeURIComponent(code)}`, window.location.origin).href;
       const message = `Hello ${invName.trim()}!\n\nYou are invited to the Diponegoro International Youth Festival 2026.\n\nTicket code: ${code}\n\nTicket link:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
       const whatsappUrl = `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
       await supabase.from('attendees').update({ invitation_status: 'opened' }).eq('ticket_code', code);
-      showToast(`Undangan untuk "${invName}" siap dikirim via WhatsApp.`);
+      showToast(`The invitation for "${invName}" is ready to send via WhatsApp.`);
       setInvName('');
       setInvPhone('');
       setInvCode('');
@@ -417,7 +417,7 @@ export default function AdminScanner() {
 
   const openWhatsApp = async (attendee) => {
     if (!attendee.phone) {
-      showToast('Nomor WhatsApp tamu belum tersedia.', 'error');
+      showToast('The guest does not have a WhatsApp number.', 'error');
       return;
     }
 
@@ -455,7 +455,7 @@ export default function AdminScanner() {
           const ticketCode = (normalized['kode tiket'] || normalized.ticket_code || '').toUpperCase();
 
           if (!name || !phone || !/^\+?\d{10,15}$/.test(phone)) {
-            throw new Error(`Baris ${index + 2}: nama atau nomor WhatsApp tidak valid.`);
+            throw new Error(`Row ${index + 2}: name or WhatsApp number is invalid.`);
           }
 
           return {
@@ -467,15 +467,15 @@ export default function AdminScanner() {
           };
         });
 
-      if (attendees.length === 0) throw new Error('File Excel tidak memiliki data.');
+      if (attendees.length === 0) throw new Error('The Excel file contains no data.');
       const { error } = await supabase.from('attendees').insert(attendees);
       if (error) throw error;
 
-      showToast(`${attendees.length} undangan berhasil diimpor. Klik tombol WhatsApp pada daftar untuk mengirim.`);
+      showToast(`${attendees.length} invitations imported successfully. Use the WhatsApp button in the list to send them.`);
       await loadData();
       setActiveTab('list');
     } catch (error) {
-      showToast(`Import Excel gagal: ${error.message}`, 'error');
+      showToast(`Excel import failed: ${error.message}`, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -494,13 +494,13 @@ export default function AdminScanner() {
   };
 
   const exportCsv = () => {
-    const headers = ['Tiket', 'Nama', 'WhatsApp', 'Kategori', 'Status Check-In', 'Status Undangan'];
+    const headers = ['Ticket', 'Name', 'WhatsApp', 'Category', 'Check-In Status', 'Invitation Status'];
     const rows = recentAttendees.map((item) => [
       item.ticket_code,
       item.name,
       item.phone ?? '',
       item.category,
-      item.is_checked_in ? 'Hadir' : 'Menunggu',
+      item.is_checked_in ? 'Checked In' : 'Pending',
       item.invitation_status ?? 'pending'
     ]);
     const csv = [headers, ...rows]
@@ -513,7 +513,7 @@ export default function AdminScanner() {
     link.download = `rekap-kehadiran-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    showToast('Rekap CSV berhasil diunduh.');
+    showToast('Attendance CSV downloaded successfully.');
   };
 
   return (
@@ -550,7 +550,7 @@ export default function AdminScanner() {
             <button 
               onClick={loadData}
               className="p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 shadow-xs transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer"
-              title="Perbarui Data"
+              title="Refresh data"
             >
               <RefreshCw className="w-4 h-4" />
               <span className="hidden sm:inline">Refresh</span>
@@ -558,10 +558,10 @@ export default function AdminScanner() {
             <button
               onClick={handleLogout}
               className="p-2 sm:px-3 sm:py-2 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer"
-              title="Keluar"
+              title="Sign out"
             >
               <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Keluar</span>
+              <span className="hidden sm:inline">Sign out</span>
             </button>
           </div>
         </div>
@@ -571,12 +571,12 @@ export default function AdminScanner() {
         <div className="flex sm:grid sm:grid-cols-3 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible snap-x snap-mandatory pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
           <div className="min-w-[260px] sm:min-w-0 snap-start bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Tamu Undangan</span>
+              <span className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Invited Guests</span>
               <span className="p-2 rounded-xl bg-[#492e6e]/10 text-[#492e6e]"><Users className="w-4 h-4" /></span>
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900">{stats.undanganHadir}</span>
-              <span className="text-xs font-semibold text-slate-500">/ {stats.totalUndangan} hadir</span>
+              <span className="text-xs font-semibold text-slate-500">/ {stats.totalUndangan} checked in</span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-2 mt-4 overflow-hidden">
               <div 
@@ -593,24 +593,24 @@ export default function AdminScanner() {
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-3xl font-black text-[#492e6e]">{stats.guestHadir}</span>
-              <span className="text-xs font-semibold text-slate-500">tamu on-site</span>
+              <span className="text-xs font-semibold text-slate-500">guests on-site</span>
             </div>
             <div className="mt-4 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
-              <span className="w-2 h-2 rounded-full bg-[#ffb800] animate-pulse"></span> Meja registrasi langsung
+              <span className="w-2 h-2 rounded-full bg-[#ffb800] animate-pulse"></span> Manual registration desk
             </div>
           </div>
 
           <div className="min-w-[260px] sm:min-w-0 snap-start bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Total Kehadiran</span>
+              <span className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Total Attendance</span>
               <span className="p-2 rounded-xl bg-[#492e6e]/10 text-[#492e6e]"><ShieldCheck className="w-4 h-4" /></span>
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-3xl font-black text-slate-900">{stats.undanganHadir + stats.guestHadir}</span>
-              <span className="text-xs font-semibold text-slate-500">orang di lokasi</span>
+              <span className="text-xs font-semibold text-slate-500">people on-site</span>
             </div>
             <div className="mt-4 text-[11px] text-slate-500 font-medium">
-              Tersinkronisasi otomatis
+              Automatically synchronized
             </div>
           </div>
         </div>
@@ -618,10 +618,10 @@ export default function AdminScanner() {
         <div className="flex items-center justify-start overflow-x-auto pb-1 -mx-1 px-1">
           <div className="p-1 bg-slate-200/80 rounded-2xl flex gap-1 border border-slate-300/60 min-w-max">
             {[
-              { id: 'scanner', label: 'Scan QR Tiket', icon: QrCode },
+              { id: 'scanner', label: 'Scan Ticket QR', icon: QrCode },
               { id: 'guest', label: 'Walk-In Guest', icon: UserPlus },
-              { id: 'tambah_undangan', label: 'Tambah Undangan', icon: Sparkles },
-              { id: 'list', label: `Daftar Hadir (${recentAttendees.length})`, icon: Users }
+              { id: 'tambah_undangan', label: 'Add Invitation', icon: Sparkles },
+              { id: 'list', label: `Attendance List (${recentAttendees.length})`, icon: Users }
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -646,8 +646,8 @@ export default function AdminScanner() {
         {activeTab === 'scanner' && (
           <div className="bg-white border border-[#492e6e]/10 rounded-[28px] sm:rounded-[32px] p-4 sm:p-8 shadow-[0_12px_40px_rgba(73,46,110,0.08)] max-w-lg mx-auto text-center space-y-4">
             <div>
-              <h3 className="text-lg font-black text-slate-900">Pemindai QR Code</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Posisikan QR code tiket tamu di tengah area pemindaian.</p>
+              <h3 className="text-lg font-black text-slate-900">QR Code Scanner</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Position the guest ticket QR code in the center of the scanner.</p>
             </div>
 
             <div className="rounded-2xl overflow-hidden border-4 border-[#ffb800]/70 bg-[#492e6e] shadow-inner">
@@ -656,13 +656,13 @@ export default function AdminScanner() {
 
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40 text-xs font-bold">
               <span className="w-2 h-2 rounded-full bg-[#ffb800] animate-pulse"></span>
-              Kamera Aktif Otomatis
+              Camera active automatically
             </div>
 
             <div className="border-t border-slate-100 pt-4">
-              <p className="text-xs font-bold text-slate-700">QR Guest Bersama</p>
+              <p className="text-xs font-bold text-slate-700">Shared Guest QR</p>
               <p className="text-[11px] text-slate-500 mt-1">
-                Buka halaman khusus ini untuk ditampilkan di layar atau dicetak.
+                Open the dedicated page to display or print this QR code.
               </p>
               <a
                 href="/guest-qr"
@@ -670,7 +670,7 @@ export default function AdminScanner() {
                 rel="noreferrer"
                 className="inline-flex mt-3 items-center justify-center px-4 py-2.5 rounded-xl bg-[#492e6e] hover:bg-[#392354] text-white text-xs font-bold transition"
               >
-                Buka Halaman QR Guest
+                Open Guest QR Page
               </a>
             </div>
 
@@ -678,8 +678,8 @@ export default function AdminScanner() {
               <div className="border-t border-slate-200 pt-4 text-left">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h4 className="text-sm font-black text-slate-900">Pilih Nama Tamu</h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Cari nama yang datang, lalu konfirmasi.</p>
+                    <h4 className="text-sm font-black text-slate-900">Select Guest Name</h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Search for the arriving guest, then confirm.</p>
                   </div>
                   <button
                     type="button"
@@ -690,7 +690,7 @@ export default function AdminScanner() {
                     }}
                     className="text-[11px] font-bold text-slate-400 hover:text-slate-700"
                   >
-                    Tutup
+                    Close
                   </button>
                 </div>
 
@@ -708,7 +708,7 @@ export default function AdminScanner() {
 
                 <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
                   {sharedSearchResults.length === 0 ? (
-                    <p className="py-4 text-center text-[11px] text-slate-400">Nama tidak ditemukan.</p>
+                    <p className="py-4 text-center text-[11px] text-slate-400">No names found.</p>
                   ) : (
                     sharedSearchResults.map((attendee) => (
                       <button
@@ -723,7 +723,7 @@ export default function AdminScanner() {
                       >
                         <span className="font-bold">{attendee.name}</span>
                         <span className={`text-[10px] font-bold ${sharedSelectedId === attendee.id ? 'text-[#ffda70]' : attendee.is_checked_in ? 'text-emerald-600' : 'text-slate-400'}`}>
-                          {attendee.is_checked_in ? 'Sudah hadir' : 'Menunggu'}
+                          {attendee.is_checked_in ? 'Already checked in' : 'Pending'}
                         </span>
                       </button>
                     ))
@@ -736,7 +736,7 @@ export default function AdminScanner() {
                   disabled={!sharedSelectedId || sharedCheckInLoading || recentAttendees.find((attendee) => attendee.id === sharedSelectedId)?.is_checked_in}
                   className="w-full mt-3 py-3 bg-[#492e6e] hover:bg-[#392354] text-white font-bold rounded-xl text-xs transition disabled:opacity-50"
                 >
-                  {sharedCheckInLoading ? 'Memproses...' : 'Konfirmasi Hadir'}
+                  {sharedCheckInLoading ? 'Processing...' : 'Confirm Attendance'}
                 </button>
               </div>
             )}
@@ -747,23 +747,23 @@ export default function AdminScanner() {
           <div className="bg-white border border-slate-200 rounded-[28px] sm:rounded-[32px] p-5 sm:p-8 shadow-sm max-w-md mx-auto">
             <div className="mb-6">
               <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40">
-                Meja Registrasi
+                Registration Desk
               </span>
-              <h3 className="text-lg font-black text-slate-900 mt-2">Registrasi Cepat Tamu Walk-In</h3>
+              <h3 className="text-lg font-black text-slate-900 mt-2">Quick Walk-In Guest Registration</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Ketik nama tamu umum, tekan Simpan, dan status kehadiran langsung tercatat.
+                Enter a guest name, submit it, and attendance will be recorded immediately.
               </p>
             </div>
 
             <form onSubmit={handleGuestSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">Nama Tamu *</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">Guest Name *</label>
                 <input
                   type="text"
                   required
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="Ketik nama lengkap..."
+                  placeholder="Enter the full name..."
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white text-sm transition"
                 />
               </div>
@@ -774,7 +774,7 @@ export default function AdminScanner() {
                 className="w-full py-3.5 bg-[#492e6e] hover:bg-[#392354] text-white font-bold rounded-xl shadow-lg shadow-[#492e6e]/20 transition disabled:opacity-50 text-xs flex items-center justify-center gap-2 cursor-pointer"
               >
                 <UserPlus className="w-4 h-4 text-[#ffb800]" />
-                {isSubmitting ? 'Memproses...' : 'Konfirmasi Masuk'}
+                {isSubmitting ? 'Processing...' : 'Confirm Entry'}
               </button>
             </form>
           </div>
@@ -784,29 +784,29 @@ export default function AdminScanner() {
           <div className="bg-white border border-slate-200 rounded-[28px] sm:rounded-[32px] p-5 sm:p-8 shadow-sm max-w-md mx-auto">
             <div className="mb-6">
               <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-[#492e6e]/10 text-[#492e6e] border border-[#492e6e]/20">
-                Pra-Acara
+                Pre-Event
               </span>
-              <h3 className="text-lg font-black text-slate-900 mt-2">Buat Undangan VIP/Tamu</h3>
+              <h3 className="text-lg font-black text-slate-900 mt-2">Create VIP/Guest Invitation</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Data akan otomatis mendapatkan tautan e-pass digital berserta QR code personal.
+                The guest will receive a digital e-pass link with a personal QR code.
               </p>
             </div>
 
             <form onSubmit={handleAddUndangan} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">Nama Tamu Undangan *</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">Invited Guest Name *</label>
                 <input
                   type="text"
                   required
                   value={invName}
                   onChange={(e) => setInvName(e.target.value)}
-                  placeholder="Contoh: Bpk. Bambang Wijaya"
+                  placeholder="Example: Mr. Bambang Wijaya"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white text-sm transition"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">Nomor WhatsApp *</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">WhatsApp Number *</label>
                 <div className="relative">
                   <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
@@ -818,16 +818,16 @@ export default function AdminScanner() {
                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white text-sm transition"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1.5">WhatsApp akan dibuka dengan pesan undangan yang sudah terisi.</p>
+                <p className="text-[11px] text-slate-400 mt-1.5">WhatsApp will open with a pre-filled invitation message.</p>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">Kode Tiket (Opsional)</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">Ticket Code (Optional)</label>
                 <input
                   type="text"
                   value={invCode}
                   onChange={(e) => setInvCode(e.target.value)}
-                  placeholder="Kosongkan untuk otomatis (misal: INV-7K9A)"
+                  placeholder="Leave blank to generate automatically (e.g. INV-7K9A)"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white text-sm transition"
                 />
               </div>
@@ -838,7 +838,7 @@ export default function AdminScanner() {
                 className="w-full py-3.5 bg-gradient-to-tr from-[#492e6e] to-[#6d4792] hover:from-[#392354] hover:to-[#492e6e] text-white font-bold rounded-xl shadow-lg shadow-[#492e6e]/20 transition disabled:opacity-50 text-xs flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
-                {isSubmitting ? 'Membuat Tiket...' : 'Simpan & Generate Tiket'}
+                {isSubmitting ? 'Creating Ticket...' : 'Save & Generate Ticket'}
               </button>
             </form>
           </div>
@@ -848,8 +848,8 @@ export default function AdminScanner() {
           <div className="bg-white border border-slate-200 rounded-[28px] sm:rounded-[32px] p-4 sm:p-6 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="font-black text-slate-900 text-base">Rekapitulasi Kehadiran</h3>
-                <p className="text-xs text-slate-500">Kelola undangan WhatsApp atau entri tamu</p>
+                <h3 className="font-black text-slate-900 text-base">Attendance Summary</h3>
+                <p className="text-xs text-slate-500">Manage WhatsApp invitations or guest entries</p>
               </div>
               <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
                 <div className="relative w-full sm:w-72 col-span-2 sm:col-auto">
@@ -858,7 +858,7 @@ export default function AdminScanner() {
                     type="text"
                     value={searchFilter}
                     onChange={handleSearchChange}
-                    placeholder="Cari nama atau kode tiket..."
+                    placeholder="Search by name or ticket code..."
                     className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white transition"
                   />
                 </div>
@@ -877,18 +877,18 @@ export default function AdminScanner() {
               <table className="w-full min-w-[700px] text-left text-xs text-slate-600">
                 <thead className="bg-slate-50 text-slate-400 font-mono uppercase text-[10px] border-y border-slate-200">
                   <tr>
-                    <th className="py-3 px-4">Tiket</th>
-                    <th className="py-3 px-4">Nama Tamu</th>
-                    <th className="py-3 px-4">Kategori</th>
+                    <th className="py-3 px-4">Ticket</th>
+                    <th className="py-3 px-4">Guest Name</th>
+                    <th className="py-3 px-4">Category</th>
                     <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4">Undangan</th>
-                    <th className="py-3 px-4 text-center">Tindakan</th>
+                    <th className="py-3 px-4">Invitation</th>
+                    <th className="py-3 px-4 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredAttendees.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="text-center py-10 text-slate-400">Tidak ada tamu yang cocok.</td>
+                      <td colSpan="6" className="text-center py-10 text-slate-400">No matching guests found.</td>
                     </tr>
                   ) : (
                     paginatedAttendees.map((item) => (
@@ -901,24 +901,24 @@ export default function AdminScanner() {
                               ? 'bg-[#492e6e]/10 text-[#492e6e] border border-[#492e6e]/20'
                               : 'bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40'
                           }`}>
-                            {item.category}
+                            {item.category === 'undangan' ? 'Invitation' : 'Guest'}
                           </span>
                         </td>
                         <td className="py-3.5 px-4">
                           {item.is_checked_in ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40">
-                              <CheckCircle2 className="w-3 h-3 text-[#492e6e]" /> Hadir
+                              <CheckCircle2 className="w-3 h-3 text-[#492e6e]" /> Checked In
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200">
-                              Menunggu
+                              Pending
                             </span>
                           )}
                         </td>
                         <td className="py-3.5 px-4">
                           {item.category === 'undangan' ? (
                             <span className={`text-[10px] font-bold uppercase ${item.invitation_status === 'opened' || item.invitation_status === 'sent' ? 'text-[#492e6e]' : 'text-slate-400'}`}>
-                              {item.invitation_status === 'opened' ? 'Link dibuka' : item.invitation_status === 'sent' ? 'Terkirim' : 'Belum dikirim'}
+                              {item.invitation_status === 'opened' ? 'Link opened' : item.invitation_status === 'sent' ? 'Sent' : 'Not sent'}
                             </span>
                           ) : <span className="text-slate-300">-</span>}
                         </td>
@@ -928,7 +928,7 @@ export default function AdminScanner() {
                               <button
                                 onClick={() => openWhatsApp(item)}
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#1ebe5d] text-white text-[11px] font-bold shadow-sm transition cursor-pointer"
-                                title="Kirim undangan via WhatsApp"
+                                title="Send invitation via WhatsApp"
                               >
                                 <MessageCircle className="w-3.5 h-3.5" />
                                 WA
@@ -938,12 +938,12 @@ export default function AdminScanner() {
                               <button
                                 onClick={() => copyLink(item.ticket_code)}
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-[#ffb800] bg-white text-[11px] font-semibold text-slate-700 shadow-xs transition cursor-pointer"
-                                title="Salin Link Undangan"
+                                title="Copy invitation link"
                               >
                                 {copiedCode === item.ticket_code ? (
                                   <>
                                     <Check className="w-3.5 h-3.5 text-[#492e6e]" />
-                                    <span className="text-[#492e6e]">Disalin!</span>
+                                    <span className="text-[#492e6e]">Copied!</span>
                                   </>
                                 ) : (
                                   <>
@@ -957,17 +957,17 @@ export default function AdminScanner() {
                               <button
                                 onClick={() => handleConfirmGuest(item)}
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#492e6e] hover:bg-[#392354] text-white text-[11px] font-bold shadow-sm transition cursor-pointer"
-                                title="Konfirmasi kehadiran guest"
+                                title="Confirm guest attendance"
                               >
                                 <CheckCircle2 className="w-3.5 h-3.5 text-[#ffb800]" />
-                                Konfirmasi
+                                Confirm
                               </button>
                             )}
 
                             <button
                               onClick={() => handleDelete(item.id, item.name)}
                               className="p-1.5 rounded-lg border border-slate-200 hover:border-rose-300 hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition shadow-xs cursor-pointer"
-                              title="Hapus Data"
+                              title="Delete record"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
