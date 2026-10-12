@@ -5,7 +5,6 @@ import { supabase } from '../supabase';
 import { 
   CheckCircle2, 
   AlertCircle, 
-  Sparkles, 
   Calendar, 
   MapPin, 
   Download, 
@@ -149,6 +148,12 @@ export default function Invitation() {
           <div>
             <p className="text-[10px] font-extrabold text-[#492e6e]/55 uppercase tracking-[0.2em]">Attendee Name</p>
             <h2 className="mt-1 break-words text-lg font-black tracking-tight text-slate-900 sm:text-xl">{tamu.name}</h2>
+            <p className="mt-1 text-xs font-bold text-[#492e6e]">Food Festival</p>
+            {(tamu.faculty || tamu.student_number) && (
+              <p className="mt-1 text-[10px] text-slate-500">
+                {[tamu.faculty, tamu.student_number && `NIM: ${tamu.student_number}`].filter(Boolean).join(' • ')}
+              </p>
+            )}
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
               <span className="px-3 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#492e6e]/10 text-[#492e6e] border border-[#492e6e]/20">
                 {tamu.category}

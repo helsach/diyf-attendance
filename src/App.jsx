@@ -15,6 +15,7 @@ export default function App() {
         <Route path="/guest-checkin" element={<GuestCheckIn />} />
         <Route path="/guest-qr" element={<GuestQr />} />
         <Route path="/register" element={<PublicRegistration />} />
+        <Route path="/registration" element={<PublicRegistration />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<RequireAdmin><AdminScanner /></RequireAdmin>} />
         <Route path="*" element={<Navigate to="/admin" replace />} />

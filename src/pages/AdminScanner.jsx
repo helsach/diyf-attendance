@@ -501,6 +501,10 @@ export default function AdminScanner() {
       'Ticket Code': item.ticket_code,
       'Full Name': item.name,
       'WhatsApp Number': item.phone ?? '',
+      Event: 'Food Festival',
+      Faculty: item.faculty ?? '',
+      'Student Number (NIM)': item.student_number ?? '',
+      'International Student': item.international_student ? 'Yes' : 'No',
       Category: item.category,
       'Check-In Status': item.is_checked_in ? 'Checked In' : 'Pending',
       'Invitation Status': item.invitation_status ?? 'Pending'
@@ -901,11 +905,13 @@ export default function AdminScanner() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px] text-left text-xs text-slate-600">
+              <table className="w-full min-w-[980px] text-left text-xs text-slate-600">
                 <thead className="bg-slate-50 text-slate-400 font-mono uppercase text-[10px] border-y border-slate-200">
                   <tr>
                     <th className="py-3 px-4">Ticket</th>
                     <th className="py-3 px-4">Guest Name</th>
+                    <th className="py-3 px-4">Event</th>
+                    <th className="py-3 px-4">Faculty / NIM</th>
                     <th className="py-3 px-4">Category</th>
                     <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4">Invitation</th>
@@ -915,13 +921,26 @@ export default function AdminScanner() {
                 <tbody className="divide-y divide-slate-100">
                   {filteredAttendees.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="text-center py-10 text-slate-400">No matching guests found.</td>
+                      <td colSpan="8" className="text-center py-10 text-slate-400">No matching guests found.</td>
                     </tr>
                   ) : (
                     paginatedAttendees.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/70 transition">
                         <td className="py-3.5 px-4 font-mono font-bold text-slate-700">{item.ticket_code}</td>
                         <td className="py-3.5 px-4 font-semibold text-slate-900">{item.name}</td>
+                        <td className="py-3.5 px-4">
+                          <span className="inline-flex rounded-full border border-[#ffb800]/40 bg-[#ffb800]/15 px-2.5 py-0.5 text-[10px] font-extrabold text-[#492e6e]">
+                            Food Festival
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {item.faculty || item.student_number ? (
+                            <div className="leading-relaxed">
+                              <div className="font-semibold text-slate-700">{item.faculty || '-'}</div>
+                              <div className="text-[10px] text-slate-400">{item.student_number ? `NIM: ${item.student_number}` : '-'}</div>
+                            </div>
+                          ) : <span className="text-slate-300">-</span>}
+                        </td>
                         <td className="py-3.5 px-4">
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${
                             item.category === 'undangan' 

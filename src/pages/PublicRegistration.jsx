@@ -4,21 +4,39 @@ import { Phone, Sparkles } from 'lucide-react';
 import { supabase } from '../supabase';
 
 const createTicketCode = () => `INV-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
+const faculties = [
+  ['Faculty of Law', 'FH'],
+  ['Faculty of Economics and Business', 'FEB'],
+  ['Faculty of Engineering', 'FT'],
+  ['Faculty of Medicine', 'FK'],
+  ['Faculty of Animal and Agricultural Sciences', 'FPP'],
+  ['Faculty of Fisheries and Marine Sciences', 'FPIK'],
+  ['Faculty of Science and Mathematics', 'FSM'],
+  ['Faculty of Public Health', 'FKM'],
+  ['Faculty of Social and Political Sciences', 'FISIP'],
+  ['Faculty of Humanities', 'FIB'],
+  ['Faculty of Psychology', 'FPsi'],
+  ['School of Vocational Studies', 'SV'],
+  ['Other', 'Other']
+];
 
 export default function PublicRegistration() {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [faculty, setFaculty] = useState('');
+  const [studentNumber, setStudentNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     const trimmedName = name.trim();
+    const trimmedStudentNumber = studentNumber.trim();
     const normalizedPhone = phone.replace(/[^\d+]/g, '').replace(/^0/, '62');
     const code = createTicketCode();
 
-    if (!trimmedName || !phone.trim()) return;
+    if (!trimmedName || !phone.trim() || !faculty || !trimmedStudentNumber) return;
 
     if (!/^\+?\d{10,15}$/.test(normalizedPhone)) {
       setError('Invalid WhatsApp number. Use the 08... or 628... format.');
@@ -31,6 +49,10 @@ export default function PublicRegistration() {
       ticket_code: code,
       name: trimmedName,
       phone: normalizedPhone,
+      event_names: ['food_festival'],
+      event_name: 'food_festival',
+      faculty,
+      student_number: trimmedStudentNumber,
       category: 'undangan',
       is_checked_in: false,
       invitation_status: 'pending'
@@ -61,10 +83,20 @@ export default function PublicRegistration() {
         <div className="mt-6 h-px bg-slate-100" />
         <h1 className="mt-5 text-xl font-black tracking-tight text-slate-900 sm:mt-6 sm:text-2xl">Invitation Registration</h1>
         <p className="mt-2 text-xs leading-relaxed text-slate-500 sm:text-sm">
-          Submit your details to receive an official digital invitation.
+          Register for the Food Festival and submit your details to receive an official digital invitation.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <fieldset>
+            <legend className="text-xs font-bold text-slate-700">Event</legend>
+            <div className="mt-1.5 grid gap-2">
+              <div className="rounded-xl border border-[#492e6e] bg-[#492e6e]/5 p-3 ring-1 ring-[#492e6e]">
+                <span className="text-sm font-bold text-slate-800">Food Festival</span>
+                <span className="mt-0.5 block text-[11px] font-normal text-slate-500">Open for public registration</span>
+              </div>
+            </div>
+          </fieldset>
+
           <label className="block text-xs font-bold text-slate-700">
             Full Name *
             <input
@@ -92,11 +124,40 @@ export default function PublicRegistration() {
             </span>
           </label>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-xs font-bold text-slate-700">
+              Faculty *
+              <select
+                required
+                value={faculty}
+                onChange={(event) => setFaculty(event.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm font-normal text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#ffb800]"
+              >
+                <option value="">Select faculty</option>
+                {faculties.map(([label, abbreviation]) => (
+                  <option key={abbreviation} value={`${label} (${abbreviation})`}>{label} ({abbreviation})</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-xs font-bold text-slate-700">
+              Student Number (NIM) *
+              <input
+                type="text"
+                required
+                value={studentNumber}
+                onChange={(event) => setStudentNumber(event.target.value)}
+                placeholder="Example: 24060123456789"
+                className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-normal text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#ffb800]"
+              />
+            </label>
+          </div>
+
           {error && <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">{error}</p>}
 
           <button
             type="submit"
-            disabled={isSubmitting || !name.trim() || !phone.trim()}
+            disabled={isSubmitting || !name.trim() || !phone.trim() || !faculty || !studentNumber.trim()}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-tr from-[#492e6e] to-[#6d4792] py-3.5 text-xs font-bold text-white shadow-lg shadow-[#492e6e]/20 transition hover:from-[#392354] hover:to-[#492e6e] disabled:opacity-50"
           >
             <Sparkles className="h-4 w-4 text-amber-300" />

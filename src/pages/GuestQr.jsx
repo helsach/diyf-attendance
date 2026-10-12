@@ -3,7 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Download, UserPlus } from 'lucide-react';
 
 const publicAppUrl = (import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin).replace(/\/$/, '');
-const registrationUrl = `${publicAppUrl}/register`;
+const registrationUrl = `${publicAppUrl}/registration`;
 
 export default function GuestQr() {
   const qrRef = useRef(null);
