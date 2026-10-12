@@ -20,7 +20,7 @@ create policy "Public guests can submit invitations"
   on public.attendees for insert
   to anon
   with check (
-    category = 'undangan'
+    category = 'guest'
     and is_checked_in = false
     and invitation_status = 'pending'
     and event_name = 'food_festival'

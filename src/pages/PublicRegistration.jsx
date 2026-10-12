@@ -53,7 +53,7 @@ export default function PublicRegistration() {
       event_name: 'food_festival',
       faculty,
       student_number: trimmedStudentNumber,
-      category: 'undangan',
+      category: 'guest',
       is_checked_in: false,
       invitation_status: 'pending'
     }]);
