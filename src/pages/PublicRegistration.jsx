@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Phone, Sparkles } from 'lucide-react';
 import { supabase } from '../supabase';
 
-const createTicketCode = () => `INV-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
+const createTicketCode = () => `GST-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
 const faculties = [
   ['Faculty of Law', 'FH'],
   ['Faculty of Economics and Business', 'FEB'],
