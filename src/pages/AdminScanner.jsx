@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { QRCodeSVG } from 'qrcode.react';
 import * as XLSX from 'xlsx';
 import { supabase } from '../supabase';
 import { 
@@ -23,7 +24,10 @@ import {
   MessageCircle,
   FileSpreadsheet,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  X,
+  MoreVertical,
+  Clock
 } from 'lucide-react';
 
 const playTone = (freq, duration, soundEnabled) => {
@@ -94,7 +98,14 @@ const PUBLIC_APP_URL = (import.meta.env.VITE_PUBLIC_APP_URL || window.location.o
 const SHARED_GUEST_URL = `${PUBLIC_APP_URL}/guest-checkin`;
 
 export default function AdminScanner() {
-  const [stats, setStats] = useState({ undanganHadir: 0, totalUndangan: 0, guestHadir: 0 });
+  const [stats, setStats] = useState({ 
+    undanganHadir: 0, 
+    totalUndangan: 0, 
+    guestHadir: 0, 
+    totalGuest: 0,
+    totalHadir: 0,
+    totalAll: 0
+  });
   const [activeTab, setActiveTab] = useState('scanner');
   
   const [guestName, setGuestName] = useState('');
@@ -116,11 +127,23 @@ export default function AdminScanner() {
   const [sharedSearch, setSharedSearch] = useState('');
   const [sharedSelectedId, setSharedSelectedId] = useState(null);
   const [sharedCheckInLoading, setSharedCheckInLoading] = useState(false);
+  const [qrModalAttendee, setQrModalAttendee] = useState(null);
+  const [actionMenuOpenId, setActionMenuOpenId] = useState(null);
   const pageSize = 10;
 
   useEffect(() => {
     soundEnabledRef.current = soundEnabled;
   }, [soundEnabled]);
+
+  useEffect(() => {
+    const handleCloseMenu = (e) => {
+      if (!e.target.closest('.action-menu-container')) {
+        setActionMenuOpenId(null);
+      }
+    };
+    document.addEventListener('click', handleCloseMenu);
+    return () => document.removeEventListener('click', handleCloseMenu);
+  }, []);
 
   const loadData = async () => {
     const { data } = await supabase
@@ -132,7 +155,18 @@ export default function AdminScanner() {
       const uHadir = data.filter(d => d.category === 'undangan' && d.is_checked_in).length;
       const uTotal = data.filter(d => d.category === 'undangan').length;
       const gHadir = data.filter(d => d.category === 'guest' && d.is_checked_in).length;
-      setStats({ undanganHadir: uHadir, totalUndangan: uTotal, guestHadir: gHadir });
+      const gTotal = data.filter(d => d.category === 'guest').length;
+      const totalHadir = data.filter(d => d.is_checked_in).length;
+      const totalAll = data.length;
+
+      setStats({ 
+        undanganHadir: uHadir, 
+        totalUndangan: uTotal, 
+        guestHadir: gHadir, 
+        totalGuest: gTotal,
+        totalHadir,
+        totalAll
+      });
       setRecentAttendees(data);
     }
   };
@@ -277,9 +311,36 @@ export default function AdminScanner() {
     };
   }, [activeTab]);
 
+  const downloadAttendeeQr = (attendee) => {
+    if (!attendee) return;
+    const svgElement = document.querySelector('#admin-qr-modal-svg svg');
+    if (!svgElement) return;
+
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    canvas.width = 400;
+    canvas.height = 400;
+
+    img.onload = () => {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 30, 30, 340, 340);
+      const pngFile = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.download = `QR-${attendee.name.replace(/[^a-zA-Z0-9]/g, '_')}-${attendee.ticket_code}.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+    };
+
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
   const sharedSearchResults = recentAttendees.filter((attendee) => (
-    attendee.category === 'undangan' &&
-    attendee.name.toLowerCase().includes(sharedSearch.toLowerCase().trim())
+    attendee.name.toLowerCase().includes(sharedSearch.toLowerCase().trim()) ||
+    attendee.ticket_code.toLowerCase().includes(sharedSearch.toLowerCase().trim())
   ));
 
   const handleSharedCheckIn = async () => {
@@ -292,7 +353,6 @@ export default function AdminScanner() {
       .from('attendees')
       .update({ is_checked_in: true, checked_in_at: now })
       .eq('id', sharedSelectedId)
-      .eq('category', 'undangan')
       .eq('is_checked_in', false)
       .select()
       .single();
@@ -348,7 +408,6 @@ export default function AdminScanner() {
       .from('attendees')
       .update({ is_checked_in: true, checked_in_at: now })
       .eq('id', attendee.id)
-      .eq('category', 'guest')
       .eq('is_checked_in', false)
       .select()
       .single();
@@ -359,7 +418,7 @@ export default function AdminScanner() {
     }
 
     playTone(920, 0.2, soundEnabledRef.current);
-    showToast(`Guest check-in confirmed: ${data.name}.`);
+    showToast(`Check-in confirmed: ${data.name}.`);
     loadData();
   };
 
@@ -403,7 +462,7 @@ export default function AdminScanner() {
   };
 
   const handleDelete = async (id, name) => {
-    const confirmDelete = window.confirm(`Yakin ingin menghapus data "${name}"?`);
+    const confirmDelete = window.confirm(`Are you sure you want to delete "${name}"?`);
     if (!confirmDelete) return;
 
     const { error } = await supabase.from('attendees').delete().eq('id', id);
@@ -475,7 +534,7 @@ export default function AdminScanner() {
 
       showToast(`${attendees.length} invitations imported successfully. Use the WhatsApp button in the list to send them.`);
       await loadData();
-      setActiveTab('list');
+      setActiveTab('pending');
     } catch (error) {
       showToast(`Excel import failed: ${error.message}`, 'error');
     } finally {
@@ -483,7 +542,44 @@ export default function AdminScanner() {
     }
   };
 
-  const filteredAttendees = recentAttendees.filter(item => 
+  const handleUndoCheckIn = async (attendee) => {
+    const confirmUndo = window.confirm(`Cancel check-in status for "${attendee.name}"? The guest will be moved back to the Pending list.`);
+    if (!confirmUndo) return;
+
+    const { data, error } = await supabase
+      .from('attendees')
+      .update({ is_checked_in: false, checked_in_at: null })
+      .eq('id', attendee.id)
+      .eq('is_checked_in', true)
+      .select()
+      .single();
+
+    if (error || !data) {
+      showToast('Failed to undo check-in.', 'error');
+    } else {
+      playTone(420, 0.2, soundEnabledRef.current);
+      showToast(`Check-in cancelled for ${data.name}.`);
+      loadData();
+    }
+  };
+
+  const getTabAttendees = () => {
+    if (activeTab === 'checked_in') {
+      return recentAttendees.filter(item => item.is_checked_in);
+    }
+    if (activeTab === 'pending') {
+      return recentAttendees.filter(item => !item.is_checked_in);
+    }
+    if (activeTab === 'all') {
+      return recentAttendees;
+    }
+    // Default when entering from 'list'
+    return recentAttendees.filter(item => !item.is_checked_in);
+  };
+
+  const currentTabAttendees = getTabAttendees();
+
+  const filteredAttendees = currentTabAttendees.filter(item => 
     item.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
     item.ticket_code.toLowerCase().includes(searchFilter.toLowerCase())
   );
@@ -615,19 +711,28 @@ export default function AdminScanner() {
                 style={{ width: `${stats.totalUndangan > 0 ? (stats.undanganHadir / stats.totalUndangan) * 100 : 0}%` }}
               />
             </div>
+            <div className="mt-3 text-[11px] text-slate-500 font-medium">
+              VIP & Special Invitations
+            </div>
           </div>
 
           <div className="min-w-[260px] sm:min-w-0 snap-start bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Guest Walk-In</span>
+              <span className="text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">Registered Guests</span>
               <span className="p-2 rounded-xl bg-[#ffb800]/15 text-[#492e6e]"><UserPlus className="w-4 h-4" /></span>
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-3xl font-black text-[#492e6e]">{stats.guestHadir}</span>
-              <span className="text-xs font-semibold text-slate-500">guests on-site</span>
+              <span className="text-xs font-semibold text-slate-500">/ {stats.totalGuest} checked in</span>
             </div>
-            <div className="mt-4 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
-              <span className="w-2 h-2 rounded-full bg-[#ffb800] animate-pulse"></span> Manual registration desk
+            <div className="w-full bg-slate-100 rounded-full h-2 mt-4 overflow-hidden">
+              <div 
+                className="bg-[#492e6e] h-full rounded-full transition-all duration-500"
+                style={{ width: `${stats.totalGuest > 0 ? (stats.guestHadir / stats.totalGuest) * 100 : 0}%` }}
+              />
+            </div>
+            <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+              <span className="w-2 h-2 rounded-full bg-[#ffb800] animate-pulse"></span> {stats.totalGuest - stats.guestHadir} pending check-in • Public & Desk
             </div>
           </div>
 
@@ -637,11 +742,17 @@ export default function AdminScanner() {
               <span className="p-2 rounded-xl bg-[#492e6e]/10 text-[#492e6e]"><ShieldCheck className="w-4 h-4" /></span>
             </div>
             <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl font-black text-slate-900">{stats.undanganHadir + stats.guestHadir}</span>
-              <span className="text-xs font-semibold text-slate-500">people on-site</span>
+              <span className="text-3xl font-black text-slate-900">{stats.totalHadir}</span>
+              <span className="text-xs font-semibold text-slate-500">/ {stats.totalAll} checked in</span>
             </div>
-            <div className="mt-4 text-[11px] text-slate-500 font-medium">
-              Automatically synchronized
+            <div className="w-full bg-slate-100 rounded-full h-2 mt-4 overflow-hidden">
+              <div 
+                className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${stats.totalAll > 0 ? (stats.totalHadir / stats.totalAll) * 100 : 0}%` }}
+              />
+            </div>
+            <div className="mt-3 text-[11px] text-slate-500 font-medium">
+              {stats.totalHadir} on-site • Automatically synchronized
             </div>
           </div>
         </div>
@@ -652,14 +763,26 @@ export default function AdminScanner() {
               { id: 'scanner', label: 'Scan Ticket QR', icon: QrCode },
               { id: 'guest', label: 'Walk-In Guest', icon: UserPlus },
               { id: 'tambah_undangan', label: 'Add Invitation', icon: Sparkles },
-              { id: 'list', label: `Attendance List (${recentAttendees.length})`, icon: Users }
+              { 
+                id: 'pending', 
+                label: `Pending Check-In (${stats.totalAll - stats.totalHadir})`, 
+                icon: Clock 
+              },
+              { 
+                id: 'checked_in', 
+                label: `Checked In (${stats.totalHadir})`, 
+                icon: CheckCircle2 
+              }
             ].map((tab) => {
               const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
+              const isActive = activeTab === tab.id || (tab.id === 'pending' && (activeTab === 'list' || activeTab === 'all'));
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setCurrentPage(1);
+                  }}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                     isActive 
                       ? 'bg-[#492e6e] text-white shadow-md shadow-[#492e6e]/20'
@@ -731,7 +854,7 @@ export default function AdminScanner() {
                     type="search"
                     value={sharedSearch}
                     onChange={(event) => setSharedSearch(event.target.value)}
-                    placeholder="Ketik nama tamu..."
+                    placeholder="Type guest name..."
                     autoFocus
                     className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white"
                   />
@@ -875,36 +998,282 @@ export default function AdminScanner() {
           </div>
         )}
 
-        {activeTab === 'list' && (
+        {(activeTab === 'pending' || activeTab === 'checked_in' || activeTab === 'all' || activeTab === 'list') && (
           <div className="bg-white border border-slate-200 rounded-[28px] sm:rounded-[32px] p-4 sm:p-6 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="font-black text-slate-900 text-base">Attendance Summary</h3>
-                <p className="text-xs text-slate-500">Manage WhatsApp invitations or guest entries</p>
-              </div>
-              <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
-                <div className="relative w-full sm:w-72 col-span-2 sm:col-auto">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                  <input
-                    type="text"
-                    value={searchFilter}
-                    onChange={handleSearchChange}
-                    placeholder="Search by name or ticket code..."
-                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white transition"
-                  />
+                <div className="flex items-center gap-2">
+                  <h3 className="font-black text-slate-900 text-base">
+                    {activeTab === 'checked_in' ? 'Checked In Attendees' : activeTab === 'all' ? 'All Attendees' : 'Pending Check-In'}
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#492e6e]/10 text-[#492e6e] border border-[#492e6e]/20">
+                    {activeTab === 'checked_in' ? `${stats.totalHadir} on-site` : activeTab === 'all' ? `${stats.totalAll} total` : `${stats.totalAll - stats.totalHadir} waiting`}
+                  </span>
                 </div>
-                <label className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#492e6e] hover:bg-[#392354] text-white text-xs font-bold cursor-pointer shadow-sm">
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {activeTab === 'checked_in'
+                    ? 'Guests who have successfully checked in on-site'
+                    : activeTab === 'all'
+                      ? 'List of all registered guests and invitations'
+                      : 'Guests who have not checked in yet (moves automatically to Checked In upon check-in)'}
+                </p>
+              </div>
+
+              {/* Sub-filter pills */}
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl w-full sm:w-fit overflow-x-auto min-w-0 max-w-full pb-1 sm:pb-1">
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('pending'); setCurrentPage(1); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap shrink-0 cursor-pointer ${
+                    activeTab === 'pending' || activeTab === 'list'
+                      ? 'bg-white text-[#492e6e] shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Pending ({stats.totalAll - stats.totalHadir})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('checked_in'); setCurrentPage(1); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap shrink-0 cursor-pointer ${
+                    activeTab === 'checked_in'
+                      ? 'bg-white text-[#492e6e] shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Checked In ({stats.totalHadir})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('all'); setCurrentPage(1); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap shrink-0 cursor-pointer ${
+                    activeTab === 'all'
+                      ? 'bg-white text-[#492e6e] shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  All ({stats.totalAll})
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  value={searchFilter}
+                  onChange={handleSearchChange}
+                  placeholder="Search by name or ticket code..."
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white transition"
+                />
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <label className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#492e6e] hover:bg-[#392354] text-white text-xs font-bold cursor-pointer shadow-sm">
                   <FileSpreadsheet className="w-4 h-4 text-[#ffb800]" />
                   Import Excel
                   <input type="file" accept=".xlsx,.xls" onChange={importExcel} disabled={isSubmitting} className="hidden" />
                 </label>
-                <button onClick={exportExcel} className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700">
+                <button onClick={exportExcel} className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 cursor-pointer">
                   <Download className="w-4 h-4" /> Export Excel
                 </button>
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Mobile Card List (visible on phones, hidden on sm+) */}
+            <div className="block sm:hidden space-y-3">
+              {filteredAttendees.length === 0 ? (
+                <div className="text-center py-10 text-slate-400 text-xs">
+                  {activeTab === 'checked_in' 
+                    ? 'No guests have checked in yet.' 
+                    : activeTab === 'pending' 
+                      ? 'All registered guests have checked in!' 
+                      : 'No matching guests found.'}
+                </div>
+              ) : (
+                paginatedAttendees.map((item) => (
+                  <div key={`m-${item.id}`} className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setQrModalAttendee(item)}
+                        className="inline-flex items-center gap-1.5 font-mono font-bold text-xs text-[#492e6e] bg-white border border-[#492e6e]/15 px-2.5 py-1 rounded-xl shadow-xs"
+                      >
+                        <QrCode className="w-3.5 h-3.5 text-[#ffb800]" />
+                        {item.ticket_code}
+                      </button>
+
+                      {item.is_checked_in ? (
+                        <div className="flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#ffb800]/20 text-[#492e6e] border border-[#ffb800]/50 whitespace-nowrap">
+                            <CheckCircle2 className="w-3 h-3 text-[#492e6e]" /> Checked In
+                          </span>
+                          {item.checked_in_at && (
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {new Date(item.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white text-slate-500 border border-slate-200">
+                          Pending
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 leading-tight">{item.name}</h4>
+                      {(item.faculty || item.student_number) && (
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          {[item.faculty, item.student_number && `NIM: ${item.student_number}`].filter(Boolean).join(' • ')}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                      <span className={`px-2 py-0.5 rounded-full font-extrabold uppercase ${
+                        item.category === 'undangan' 
+                          ? 'bg-[#492e6e]/10 text-[#492e6e] border border-[#492e6e]/20'
+                          : 'bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40'
+                      }`}>
+                        {item.category === 'undangan' ? 'Invitation' : 'Guest'}
+                      </span>
+
+                      <span className="px-2 py-0.5 rounded-full font-extrabold bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40">
+                        Food Festival
+                      </span>
+
+                      {item.category === 'guest' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold bg-[#492e6e]/10 text-[#492e6e] border border-[#492e6e]/20">
+                          <Check className="w-3 h-3 text-[#ffb800]" />
+                          {item.invitation_status === 'opened' ? 'Ticket Issued' : 'Registered'}
+                        </span>
+                      ) : (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold ${
+                          item.invitation_status === 'opened' || item.invitation_status === 'sent' 
+                            ? 'bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40' 
+                            : 'bg-slate-100 text-slate-500 border border-slate-200'
+                        }`}>
+                          {item.invitation_status === 'opened' ? 'Pass Opened' : item.invitation_status === 'sent' ? 'Sent' : 'Not Sent'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Actions row for Mobile */}
+                    <div className="pt-2 border-t border-slate-200/70 flex items-center justify-between gap-1.5">
+                      {!item.is_checked_in ? (
+                        <button
+                          type="button"
+                          onClick={() => handleConfirmGuest(item)}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#492e6e] hover:bg-[#392354] text-white text-xs font-bold shadow-xs transition cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#ffb800]" />
+                          Confirm Check-In
+                        </button>
+                      ) : (
+                        <div className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Checked In
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setQrModalAttendee(item)}
+                          className="p-2 rounded-xl bg-white hover:bg-[#492e6e]/10 text-[#492e6e] border border-slate-200 shadow-2xs transition cursor-pointer"
+                          title="View QR Code & Ticket"
+                        >
+                          <QrCode className="w-4 h-4" />
+                        </button>
+
+                        {item.phone && (
+                          <button
+                            type="button"
+                            onClick={() => openWhatsApp(item)}
+                            className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-500 text-emerald-600 hover:text-white border border-emerald-200 shadow-2xs transition cursor-pointer"
+                            title="Send via WhatsApp"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        <div className="relative action-menu-container inline-block">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActionMenuOpenId(actionMenuOpenId === `m-${item.id}` ? null : `m-${item.id}`);
+                            }}
+                            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-slate-800 shadow-2xs transition cursor-pointer"
+                            title="More options"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+
+                          {actionMenuOpenId === `m-${item.id}` && (
+                            <div className="absolute right-0 bottom-full mb-1 w-44 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-1.5 z-40 text-left text-xs animate-in fade-in zoom-in-95 duration-100">
+                              <a
+                                href={`${PUBLIC_APP_URL}/invitation?code=${encodeURIComponent(item.ticket_code)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={() => setActionMenuOpenId(null)}
+                                className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-[#492e6e] font-semibold transition"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 text-[#ffb800]" />
+                                Open Ticket Pass
+                              </a>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  copyLink(item.ticket_code);
+                                  setActionMenuOpenId(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-[#492e6e] font-semibold transition text-left cursor-pointer"
+                              >
+                                <Copy className="w-3.5 h-3.5 text-slate-400" />
+                                Copy Ticket Link
+                              </button>
+
+                              {item.is_checked_in && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleUndoCheckIn(item);
+                                    setActionMenuOpenId(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-amber-700 hover:bg-amber-50 font-semibold transition text-left cursor-pointer"
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
+                                  Undo Check-In
+                                </button>
+                              )}
+
+                              <div className="my-1 border-t border-slate-100" />
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleDelete(item.id, item.name);
+                                  setActionMenuOpenId(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 font-semibold transition text-left cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete Attendee
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Desktop Table (hidden on small screens, visible on sm+) */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full min-w-[980px] text-left text-xs text-slate-600">
                 <thead className="bg-slate-50 text-slate-400 font-mono uppercase text-[10px] border-y border-slate-200">
                   <tr>
@@ -921,12 +1290,28 @@ export default function AdminScanner() {
                 <tbody className="divide-y divide-slate-100">
                   {filteredAttendees.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="text-center py-10 text-slate-400">No matching guests found.</td>
+                      <td colSpan="8" className="text-center py-10 text-slate-400">
+                        {activeTab === 'checked_in' 
+                          ? 'No guests have checked in yet.' 
+                          : activeTab === 'pending' 
+                            ? 'All registered guests have checked in!' 
+                            : 'No matching guests found.'}
+                      </td>
                     </tr>
                   ) : (
                     paginatedAttendees.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/70 transition">
-                        <td className="py-3.5 px-4 font-mono font-bold text-slate-700">{item.ticket_code}</td>
+                        <td className="py-3.5 px-4 font-mono font-bold text-slate-700">
+                          <button
+                            type="button"
+                            onClick={() => setQrModalAttendee(item)}
+                            className="inline-flex items-center gap-1.5 hover:text-[#492e6e] text-slate-800 transition cursor-pointer font-mono font-bold"
+                            title="Click to view QR Code"
+                          >
+                            <QrCode className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#ffb800]" />
+                            {item.ticket_code}
+                          </button>
+                        </td>
                         <td className="py-3.5 px-4 font-semibold text-slate-900">{item.name}</td>
                         <td className="py-3.5 px-4">
                           <span className="inline-flex rounded-full border border-[#ffb800]/40 bg-[#ffb800]/15 px-2.5 py-0.5 text-[10px] font-extrabold text-[#492e6e]">
@@ -952,83 +1337,148 @@ export default function AdminScanner() {
                         </td>
                         <td className="py-3.5 px-4">
                           {item.is_checked_in ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40">
-                              <CheckCircle2 className="w-3 h-3 text-[#492e6e]" /> Checked In
-                            </span>
+                            <div>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40 whitespace-nowrap">
+                                <CheckCircle2 className="w-3 h-3 text-[#492e6e]" /> Checked In
+                              </span>
+                              {item.checked_in_at && (
+                                <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                                  {new Date(item.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              )}
+                            </div>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200 whitespace-nowrap">
                               Pending
                             </span>
                           )}
                         </td>
                         <td className="py-3.5 px-4">
-                          {item.category === 'undangan' ? (
-                            <span className={`text-[10px] font-bold uppercase ${item.invitation_status === 'opened' || item.invitation_status === 'sent' ? 'text-[#492e6e]' : 'text-slate-400'}`}>
-                              {item.invitation_status === 'opened' ? 'Link opened' : item.invitation_status === 'sent' ? 'Sent' : 'Not sent'}
+                          {item.category === 'guest' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#492e6e]/10 text-[#492e6e] border border-[#492e6e]/20 whitespace-nowrap">
+                              <Check className="w-3 h-3 text-[#ffb800]" />
+                              {item.invitation_status === 'opened' ? 'Ticket Issued' : 'Registered'}
                             </span>
-                          ) : <span className="text-slate-300">-</span>}
+                          ) : (
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${
+                              item.invitation_status === 'opened' || item.invitation_status === 'sent' 
+                                ? 'bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40' 
+                                : 'bg-slate-100 text-slate-500 border border-slate-200'
+                            }`}>
+                              {item.invitation_status === 'opened' 
+                                ? 'Pass Opened' 
+                                : item.invitation_status === 'sent' 
+                                  ? 'Sent' 
+                                  : 'Not Sent'}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            {item.category === 'undangan' && (
-                              <a
-                                href={`${PUBLIC_APP_URL}/invitation?code=${encodeURIComponent(item.ticket_code)}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#492e6e] hover:bg-[#392354] text-white text-[11px] font-bold shadow-sm transition"
-                                title="Open invitation link"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5 text-[#ffb800]" />
-                                Open
-                              </a>
-                            )}
-                            {item.category === 'undangan' && (
+                          <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                            {/* Primary Confirm button if not checked in */}
+                            {!item.is_checked_in && (
                               <button
-                                onClick={() => openWhatsApp(item)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#1ebe5d] text-white text-[11px] font-bold shadow-sm transition cursor-pointer"
-                                title="Send invitation via WhatsApp"
-                              >
-                                <MessageCircle className="w-3.5 h-3.5" />
-                                WA
-                              </button>
-                            )}
-                            {item.category === 'undangan' && (
-                              <button
-                                onClick={() => copyLink(item.ticket_code)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-[#ffb800] bg-white text-[11px] font-semibold text-slate-700 shadow-xs transition cursor-pointer"
-                                title="Copy invitation link"
-                              >
-                                {copiedCode === item.ticket_code ? (
-                                  <>
-                                    <Check className="w-3.5 h-3.5 text-[#492e6e]" />
-                                    <span className="text-[#492e6e]">Copied!</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy className="w-3.5 h-3.5 text-slate-400" />
-                                    Link
-                                  </>
-                                )}
-                              </button>
-                            )}
-                            {item.category === 'guest' && !item.is_checked_in && (
-                              <button
+                                type="button"
                                 onClick={() => handleConfirmGuest(item)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#492e6e] hover:bg-[#392354] text-white text-[11px] font-bold shadow-sm transition cursor-pointer"
-                                title="Confirm guest attendance"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#492e6e] hover:bg-[#392354] text-white text-[11px] font-bold shadow-xs transition cursor-pointer"
+                                title="Confirm Check-In"
                               >
                                 <CheckCircle2 className="w-3.5 h-3.5 text-[#ffb800]" />
                                 Confirm
                               </button>
                             )}
 
+                            {/* QR Code modal button */}
                             <button
-                              onClick={() => handleDelete(item.id, item.name)}
-                              className="p-1.5 rounded-lg border border-slate-200 hover:border-rose-300 hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition shadow-xs cursor-pointer"
-                              title="Delete record"
+                              type="button"
+                              onClick={() => setQrModalAttendee(item)}
+                              className="p-1.5 rounded-xl bg-slate-100 hover:bg-[#492e6e]/10 text-slate-700 hover:text-[#492e6e] border border-slate-200 transition cursor-pointer"
+                              title="View QR Code & Ticket"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <QrCode className="w-3.5 h-3.5 text-[#492e6e]" />
                             </button>
+
+                            {/* WhatsApp button if phone exists */}
+                            {item.phone && (
+                              <button
+                                type="button"
+                                onClick={() => openWhatsApp(item)}
+                                className="p-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-500 text-emerald-600 hover:text-white border border-emerald-200 transition cursor-pointer"
+                                title="Send via WhatsApp"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
+                            {/* More actions dropdown (•••) */}
+                            <div className="relative action-menu-container inline-block">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActionMenuOpenId(actionMenuOpenId === item.id ? null : item.id);
+                                }}
+                                className="p-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                                title="More options"
+                              >
+                                <MoreVertical className="w-3.5 h-3.5" />
+                              </button>
+
+                              {actionMenuOpenId === item.id && (
+                                <div className="absolute right-0 mt-1 w-44 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-1.5 z-40 text-left text-xs animate-in fade-in zoom-in-95 duration-100">
+                                  <a
+                                    href={`${PUBLIC_APP_URL}/invitation?code=${encodeURIComponent(item.ticket_code)}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    onClick={() => setActionMenuOpenId(null)}
+                                    className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-[#492e6e] font-semibold transition"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5 text-[#ffb800]" />
+                                    Open Ticket Pass
+                                  </a>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      copyLink(item.ticket_code);
+                                      setActionMenuOpenId(null);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-[#492e6e] font-semibold transition text-left cursor-pointer"
+                                  >
+                                    <Copy className="w-3.5 h-3.5 text-slate-400" />
+                                    Copy Ticket Link
+                                  </button>
+
+                                  {item.is_checked_in && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleUndoCheckIn(item);
+                                        setActionMenuOpenId(null);
+                                      }}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-amber-700 hover:bg-amber-50 font-semibold transition text-left cursor-pointer"
+                                    >
+                                      <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
+                                      Undo Check-In
+                                    </button>
+                                  )}
+
+                                  <div className="my-1 border-t border-slate-100" />
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleDelete(item.id, item.name);
+                                      setActionMenuOpenId(null);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 font-semibold transition text-left cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    Delete Attendee
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -1038,12 +1488,12 @@ export default function AdminScanner() {
               </table>
             </div>
             <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-              <span className="text-[11px] text-slate-400">{filteredAttendees.length} data</span>
+              <span className="text-[11px] text-slate-400">{filteredAttendees.length} records</span>
               <div className="flex items-center gap-2">
                 <button disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1)} className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50">
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="text-[11px] font-bold text-slate-600">Halaman {currentPage} / {totalPages}</span>
+                <span className="text-[11px] font-bold text-slate-600">Page {currentPage} of {totalPages}</span>
                 <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((page) => page + 1)} className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50">
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -1052,6 +1502,109 @@ export default function AdminScanner() {
           </div>
         )}
       </main>
+
+      {/* QR Code Modal for any Attendee */}
+      {qrModalAttendee && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-[#492e6e]/20 w-full max-w-sm max-h-[92vh] overflow-y-auto rounded-[32px] p-5 sm:p-6 text-center shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button
+              type="button"
+              onClick={() => setQrModalAttendee(null)}
+              className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${
+                qrModalAttendee.category === 'undangan'
+                  ? 'bg-[#492e6e]/10 text-[#492e6e] border border-[#492e6e]/20'
+                  : 'bg-[#ffb800]/15 text-[#492e6e] border border-[#ffb800]/40'
+              }`}>
+                {qrModalAttendee.category === 'undangan' ? 'Invitation' : 'Guest'}
+              </span>
+              {qrModalAttendee.is_checked_in ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#ffb800]/20 text-[#492e6e] border border-[#ffb800]/50">
+                  <CheckCircle2 className="w-3 h-3 text-[#492e6e]" /> Checked In
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                  Pending
+                </span>
+              )}
+            </div>
+
+            <h3 className="text-base font-black text-slate-900 truncate px-4">{qrModalAttendee.name}</h3>
+            {(qrModalAttendee.faculty || qrModalAttendee.student_number) && (
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {[qrModalAttendee.faculty, qrModalAttendee.student_number && `NIM: ${qrModalAttendee.student_number}`].filter(Boolean).join(' • ')}
+              </p>
+            )}
+
+            {/* QR Code Container */}
+            <div id="admin-qr-modal-svg" className="inline-block my-4 p-3 bg-white rounded-2xl border-4 border-[#ffb800]/70 shadow-md">
+              <QRCodeSVG
+                value={qrModalAttendee.ticket_code}
+                size={190}
+                level="H"
+                includeMargin={false}
+              />
+            </div>
+
+            {/* Ticket code & copy */}
+            <div className="flex items-center justify-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-mono">
+              <span className="text-xs text-slate-400">Code:</span>
+              <span className="text-sm font-black text-[#492e6e] tracking-wider">{qrModalAttendee.ticket_code}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(qrModalAttendee.ticket_code);
+                  showToast('Ticket code copied!');
+                }}
+                className="p-1 hover:bg-slate-200 rounded text-slate-500 transition cursor-pointer"
+                title="Copy code"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => downloadAttendeeQr(qrModalAttendee)}
+                className="w-full py-2.5 px-3 bg-[#ffb800] hover:bg-[#e5a500] text-[#492e6e] rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download QR
+              </button>
+              <a
+                href={`${PUBLIC_APP_URL}/invitation?code=${encodeURIComponent(qrModalAttendee.ticket_code)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-2.5 px-3 bg-[#492e6e] hover:bg-[#392354] text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-[#ffb800]" />
+                Open Pass
+              </a>
+            </div>
+
+            {!qrModalAttendee.is_checked_in && (
+              <button
+                type="button"
+                onClick={async () => {
+                  await handleConfirmGuest(qrModalAttendee);
+                  setQrModalAttendee((prev) => prev ? { ...prev, is_checked_in: true } : null);
+                }}
+                className="w-full mt-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Confirm Check-In
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className={`fixed bottom-5 right-5 z-50 max-w-sm rounded-xl border px-4 py-3 text-xs font-bold shadow-lg ${toast.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-700' : toast.type === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>

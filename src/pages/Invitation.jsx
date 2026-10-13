@@ -33,6 +33,13 @@ export default function Invitation() {
         setError('Invitation pass not found or the link has expired.');
       } else {
         setTamu(attendee);
+        if (attendee.invitation_status !== 'opened') {
+          supabase
+            .from('attendees')
+            .update({ invitation_status: 'opened' })
+            .eq('ticket_code', ticketCode)
+            .then(() => {});
+        }
       }
       setLoading(false);
     }
