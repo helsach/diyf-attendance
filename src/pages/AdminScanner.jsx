@@ -49,50 +49,8 @@ const playTone = (freq, duration, soundEnabled) => {
   }
 };
 
-const countryCodes = [
-  ['93', 'Afghanistan'], ['355', 'Albania'], ['213', 'Algeria'], ['376', 'Andorra'], ['244', 'Angola'],
-  ['1268', 'Antigua dan Barbuda'], ['54', 'Argentina'], ['374', 'Armenia'], ['297', 'Aruba'], ['61', 'Australia'],
-  ['43', 'Austria'], ['994', 'Azerbaijan'], ['1242', 'Bahamas'], ['973', 'Bahrain'], ['880', 'Bangladesh'],
-  ['1246', 'Barbados'], ['375', 'Belarus'], ['32', 'Belgia'], ['501', 'Belize'], ['229', 'Benin'],
-  ['975', 'Bhutan'], ['591', 'Bolivia'], ['387', 'Bosnia dan Herzegovina'], ['267', 'Botswana'], ['55', 'Brasil'],
-  ['673', 'Brunei'], ['359', 'Bulgaria'], ['226', 'Burkina Faso'], ['257', 'Burundi'], ['238', 'Cabo Verde'],
-  ['855', 'Kamboja'], ['237', 'Kamerun'], ['1', 'Kanada'], ['236', 'Republik Afrika Tengah'], ['235', 'Chad'],
-  ['56', 'Chile'], ['86', 'China'], ['57', 'Kolombia'], ['269', 'Komoro'], ['242', 'Kongo'],
-  ['243', 'Republik Demokratik Kongo'], ['682', 'Kepulauan Cook'], ['506', 'Kosta Rika'], ['385', 'Kroasia'],
-  ['53', 'Kuba'], ['357', 'Siprus'], ['420', 'Ceko'], ['45', 'Denmark'], ['253', 'Djibouti'],
-  ['1767', 'Dominika'], ['1809', 'Republik Dominika'], ['593', 'Ekuador'], ['20', 'Mesir'], ['503', 'El Salvador'],
-  ['240', 'Guinea Khatulistiwa'], ['291', 'Eritrea'], ['372', 'Estonia'], ['268', 'Eswatini'], ['251', 'Ethiopia'],
-  ['679', 'Fiji'], ['358', 'Finlandia'], ['33', 'Prancis'], ['241', 'Gabon'], ['220', 'Gambia'],
-  ['995', 'Georgia'], ['49', 'Jerman'], ['233', 'Ghana'], ['30', 'Yunani'], ['1473', 'Grenada'],
-  ['502', 'Guatemala'], ['224', 'Guinea'], ['245', 'Guinea-Bissau'], ['592', 'Guyana'], ['509', 'Haiti'],
-  ['504', 'Honduras'], ['852', 'Hong Kong'], ['36', 'Hungaria'], ['354', 'Islandia'], ['91', 'India'],
-  ['62', 'Indonesia'], ['98', 'Iran'], ['964', 'Irak'], ['353', 'Irlandia'], ['972', 'Israel'],
-  ['39', 'Italia'], ['225', 'Pantai Gading'], ['1876', 'Jamaika'], ['81', 'Jepang'], ['962', 'Yordania'],
-  ['7', 'Kazakhstan / Rusia'], ['254', 'Kenya'], ['686', 'Kiribati'], ['383', 'Kosovo'], ['965', 'Kuwait'],
-  ['996', 'Kirgizstan'], ['856', 'Laos'], ['371', 'Latvia'], ['961', 'Lebanon'], ['266', 'Lesotho'],
-  ['231', 'Liberia'], ['218', 'Libya'], ['423', 'Liechtenstein'], ['370', 'Lithuania'], ['352', 'Luksemburg'],
-  ['853', 'Makau'], ['261', 'Madagaskar'], ['265', 'Malawi'], ['60', 'Malaysia'], ['960', 'Maladewa'],
-  ['223', 'Mali'], ['356', 'Malta'], ['692', 'Kepulauan Marshall'], ['222', 'Mauritania'], ['230', 'Mauritius'],
-  ['52', 'Meksiko'], ['691', 'Mikronesia'], ['373', 'Moldova'], ['377', 'Monako'], ['976', 'Mongolia'],
-  ['382', 'Montenegro'], ['212', 'Maroko'], ['258', 'Mozambik'], ['95', 'Myanmar'], ['264', 'Namibia'],
-  ['674', 'Nauru'], ['977', 'Nepal'], ['31', 'Belanda'], ['64', 'Selandia Baru'], ['505', 'Nikaragua'],
-  ['227', 'Niger'], ['234', 'Nigeria'], ['683', 'Niue'], ['850', 'Korea Utara'], ['389', 'Makedonia Utara'],
-  ['47', 'Norwegia'], ['968', 'Oman'], ['92', 'Pakistan'], ['680', 'Palau'], ['970', 'Palestina'],
-  ['507', 'Panama'], ['675', 'Papua Nugini'], ['595', 'Paraguay'], ['51', 'Peru'], ['63', 'Filipina'],
-  ['48', 'Polandia'], ['351', 'Portugal'], ['974', 'Qatar'], ['40', 'Rumania'], ['250', 'Rwanda'],
-  ['1869', 'Saint Kitts dan Nevis'], ['1758', 'Saint Lucia'], ['1784', 'Saint Vincent dan Grenadine'], ['685', 'Samoa'],
-  ['378', 'San Marino'], ['239', 'Sao Tome dan Principe'], ['966', 'Arab Saudi'], ['221', 'Senegal'], ['381', 'Serbia'],
-  ['248', 'Seychelles'], ['232', 'Sierra Leone'], ['65', 'Singapura'], ['421', 'Slovakia'], ['386', 'Slovenia'],
-  ['677', 'Kepulauan Solomon'], ['252', 'Somalia'], ['27', 'Afrika Selatan'], ['82', 'Korea Selatan'], ['211', 'Sudan Selatan'],
-  ['34', 'Spanyol'], ['94', 'Sri Lanka'], ['249', 'Sudan'], ['597', 'Suriname'], ['46', 'Swedia'],
-  ['41', 'Swiss'], ['963', 'Suriah'], ['886', 'Taiwan'], ['992', 'Tajikistan'], ['255', 'Tanzania'],
-  ['66', 'Thailand'], ['670', 'Timor-Leste'], ['228', 'Togo'], ['690', 'Tokelau'], ['676', 'Tonga'],
-  ['1868', 'Trinidad dan Tobago'], ['216', 'Tunisia'], ['90', 'Turki'], ['993', 'Turkmenistan'], ['688', 'Tuvalu'],
-  ['256', 'Uganda'], ['380', 'Ukraina'], ['971', 'Uni Emirat Arab'], ['44', 'Britania Raya'], ['1', 'Amerika Serikat'],
-  ['598', 'Uruguay'], ['998', 'Uzbekistan'], ['678', 'Vanuatu'], ['379', 'Vatikan'], ['58', 'Venezuela'],
-  ['84', 'Vietnam'], ['681', 'Wallis dan Futuna'], ['967', 'Yaman'], ['260', 'Zambia'], ['263', 'Zimbabwe']
-].map(([code, name]) => ({ code, name }));
-void countryCodes;
+import { allCountryCodes, normalizeWhatsAppNumber, isValidWhatsAppNumber } from '../utils/phoneUtils';
+
 const SHARED_INVITATION_CODE = 'DIYF-GUEST';
 const PUBLIC_APP_URL = (import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin).replace(/\/$/, '');
 const SHARED_GUEST_URL = `${PUBLIC_APP_URL}/guest-checkin`;
@@ -111,6 +69,7 @@ export default function AdminScanner() {
   const [guestName, setGuestName] = useState('');
   const [invName, setInvName] = useState('');
   const [invPhone, setInvPhone] = useState('');
+  const [invCountryCode, setInvCountryCode] = useState('62');
   const [invCode, setInvCode] = useState('');
   const [copiedCode, setCopiedCode] = useState(null);
 
@@ -428,10 +387,10 @@ export default function AdminScanner() {
 
     setIsSubmitting(true);
     const code = invCode.trim() ? invCode.trim().toUpperCase() : `INV-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-    const phone = invPhone.replace(/[^\d+]/g, '').replace(/^0/, '62');
+    const phone = normalizeWhatsAppNumber(invPhone, invCountryCode);
 
-    if (!/^\+?\d{10,15}$/.test(phone)) {
-      showToast('Invalid WhatsApp number. Use the 08... or 628... format.', 'error');
+    if (!isValidWhatsAppNumber(phone)) {
+      showToast('Invalid WhatsApp number. Please check country code and digits.', 'error');
       setIsSubmitting(false);
       return;
     }
@@ -449,7 +408,7 @@ export default function AdminScanner() {
     } else {
       const invitationUrl = `${PUBLIC_APP_URL}/invitation?code=${encodeURIComponent(code)}`;
       const message = `Hello ${invName.trim()}!\n\nYou are invited to the Diponegoro International Youth Festival 2026.\n\nTicket code: ${code}\n\nOpen your invitation here:\n${invitationUrl}\n\nPlease show the QR code at the check-in desk.`;
-      const whatsappUrl = `https://wa.me/${phone.replace('+', '')}?text=${encodeURIComponent(message)}`;
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
       await supabase.from('attendees').update({ invitation_status: 'opened' }).eq('ticket_code', code);
       showToast(`The invitation for "${invName}" is ready to send via WhatsApp.`);
@@ -512,10 +471,10 @@ export default function AdminScanner() {
           );
           const name = normalized.nama || normalized.name;
           const rawPhone = normalized['nomor whatsapp'] || normalized.whatsapp || normalized.phone || normalized.telepon;
-          const phone = rawPhone?.replace(/[^\d+]/g, '').replace(/^0/, '62');
+          const phone = rawPhone ? normalizeWhatsAppNumber(rawPhone, '62') : '';
           const ticketCode = (normalized['kode tiket'] || normalized.ticket_code || '').toUpperCase();
 
-          if (!name || !phone || !/^\+?\d{10,15}$/.test(phone)) {
+          if (!name || !phone || !isValidWhatsAppNumber(phone)) {
             throw new Error(`Row ${index + 2}: name or WhatsApp number is invalid.`);
           }
 
@@ -598,8 +557,8 @@ export default function AdminScanner() {
       'Full Name': item.name,
       'WhatsApp Number': item.phone ?? '',
       Event: 'Food Festival',
-      Faculty: item.faculty ?? '',
-      'Student Number (NIM)': item.student_number ?? '',
+      'Faculty / Institution': item.faculty ?? '',
+      'NIM / NIP': item.student_number ?? '',
       'International Student': item.international_student ? 'Yes' : 'No',
       Category: item.category,
       'Check-In Status': item.is_checked_in ? 'Checked In' : 'Pending',
@@ -961,18 +920,33 @@ export default function AdminScanner() {
 
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">WhatsApp Number *</label>
-                <div className="relative">
-                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                  <input
-                    type="tel"
-                    required
-                    value={invPhone}
-                    onChange={(e) => setInvPhone(e.target.value)}
-                    placeholder="081234567890"
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white text-sm transition"
-                  />
+                <div className="flex gap-2">
+                  <div className="relative w-36 shrink-0">
+                    <select
+                      value={invCountryCode}
+                      onChange={(e) => setInvCountryCode(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 bg-slate-50 py-3 px-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#ffb800] truncate"
+                    >
+                      {allCountryCodes.map((c, idx) => (
+                        <option key={`${c.code}-${idx}`} value={c.code}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="relative flex-1">
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    <input
+                      type="tel"
+                      required
+                      value={invPhone}
+                      onChange={(e) => setInvPhone(e.target.value)}
+                      placeholder="8123456789 or +60..."
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white text-sm transition"
+                    />
+                  </div>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1.5">WhatsApp will open with a pre-filled invitation message.</p>
+                <p className="text-[11px] text-slate-400 mt-1.5">Supports domestic and international WhatsApp numbers.</p>
               </div>
 
               <div>
@@ -1125,7 +1099,7 @@ export default function AdminScanner() {
                       <h4 className="text-sm font-black text-slate-900 leading-tight">{item.name}</h4>
                       {(item.faculty || item.student_number) && (
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          {[item.faculty, item.student_number && `NIM: ${item.student_number}`].filter(Boolean).join(' • ')}
+                          {[item.faculty, item.student_number && `NIM/NIP: ${item.student_number}`].filter(Boolean).join(' • ')}
                         </p>
                       )}
                     </div>
@@ -1280,7 +1254,7 @@ export default function AdminScanner() {
                     <th className="py-3 px-4">Ticket</th>
                     <th className="py-3 px-4">Guest Name</th>
                     <th className="py-3 px-4">Event</th>
-                    <th className="py-3 px-4">Faculty / NIM</th>
+                    <th className="py-3 px-4">Faculty / NIM/NIP</th>
                     <th className="py-3 px-4">Category</th>
                     <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4">Invitation</th>
@@ -1322,7 +1296,7 @@ export default function AdminScanner() {
                           {item.faculty || item.student_number ? (
                             <div className="leading-relaxed">
                               <div className="font-semibold text-slate-700">{item.faculty || '-'}</div>
-                              <div className="text-[10px] text-slate-400">{item.student_number ? `NIM: ${item.student_number}` : '-'}</div>
+                              <div className="text-[10px] text-slate-400">{item.student_number ? `NIM/NIP: ${item.student_number}` : '-'}</div>
                             </div>
                           ) : <span className="text-slate-300">-</span>}
                         </td>
@@ -1538,7 +1512,7 @@ export default function AdminScanner() {
             <h3 className="text-base font-black text-slate-900 truncate px-4">{qrModalAttendee.name}</h3>
             {(qrModalAttendee.faculty || qrModalAttendee.student_number) && (
               <p className="text-[11px] text-slate-500 mt-0.5">
-                {[qrModalAttendee.faculty, qrModalAttendee.student_number && `NIM: ${qrModalAttendee.student_number}`].filter(Boolean).join(' • ')}
+                {[qrModalAttendee.faculty, qrModalAttendee.student_number && `NIM/NIP: ${qrModalAttendee.student_number}`].filter(Boolean).join(' • ')}
               </p>
             )}
 

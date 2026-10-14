@@ -158,7 +158,7 @@ export default function Invitation() {
             <p className="mt-1 text-xs font-bold text-[#492e6e]">Food Festival</p>
             {(tamu.faculty || tamu.student_number) && (
               <p className="mt-1 text-[10px] text-slate-500">
-                {[tamu.faculty, tamu.student_number && `NIM: ${tamu.student_number}`].filter(Boolean).join(' • ')}
+                {[tamu.faculty, tamu.student_number && `NIM/NIP: ${tamu.student_number}`].filter(Boolean).join(' • ')}
               </p>
             )}
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
