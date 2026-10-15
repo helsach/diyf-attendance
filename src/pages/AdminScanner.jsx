@@ -27,7 +27,9 @@ import {
   ChevronRight,
   X,
   MoreVertical,
-  Clock
+  Clock,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 const playTone = (freq, duration, soundEnabled) => {
@@ -88,6 +90,15 @@ export default function AdminScanner() {
   const [sharedCheckInLoading, setSharedCheckInLoading] = useState(false);
   const [qrModalAttendee, setQrModalAttendee] = useState(null);
   const [actionMenuOpenId, setActionMenuOpenId] = useState(null);
+  const [isPublicRegistrationOpen, setIsPublicRegistrationOpen] = useState(true);
+  const [publicRegClosedMessage, setPublicRegClosedMessage] = useState(
+    'Online public registration is temporarily closed and will reopen on the event day at the venue.'
+  );
+  const [isTogglingReg, setIsTogglingReg] = useState(false);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [modalCloseMessage, setModalCloseMessage] = useState(
+    'Online public registration is temporarily closed and will reopen on the event day at the venue.'
+  );
   const pageSize = 10;
 
   useEffect(() => {
@@ -111,12 +122,23 @@ export default function AdminScanner() {
       .order('created_at', { ascending: false });
 
     if (data) {
-      const uHadir = data.filter(d => d.category === 'undangan' && d.is_checked_in).length;
-      const uTotal = data.filter(d => d.category === 'undangan').length;
-      const gHadir = data.filter(d => d.category === 'guest' && d.is_checked_in).length;
-      const gTotal = data.filter(d => d.category === 'guest').length;
-      const totalHadir = data.filter(d => d.is_checked_in).length;
-      const totalAll = data.length;
+      const statusRow = data.find(d => d.ticket_code === 'SYS-REG-STATUS');
+      if (statusRow) {
+        setIsPublicRegistrationOpen(Boolean(statusRow.is_checked_in));
+        if (statusRow.faculty) {
+          setPublicRegClosedMessage(statusRow.faculty);
+        }
+      }
+
+      // Filter out system control records from actual attendee stats and lists
+      const attendees = data.filter(d => !d.ticket_code.startsWith('SYS-'));
+
+      const uHadir = attendees.filter(d => d.category === 'undangan' && d.is_checked_in).length;
+      const uTotal = attendees.filter(d => d.category === 'undangan').length;
+      const gHadir = attendees.filter(d => d.category === 'guest' && d.is_checked_in).length;
+      const gTotal = attendees.filter(d => d.category === 'guest').length;
+      const totalHadir = attendees.filter(d => d.is_checked_in).length;
+      const totalAll = attendees.length;
 
       setStats({ 
         undanganHadir: uHadir, 
@@ -126,7 +148,67 @@ export default function AdminScanner() {
         totalHadir,
         totalAll
       });
-      setRecentAttendees(data);
+      setRecentAttendees(attendees);
+    }
+  };
+
+  const handleToggleRegistration = async (targetState, customMsg = '') => {
+    setIsTogglingReg(true);
+    try {
+      const msg = customMsg || publicRegClosedMessage || 'Online public registration is temporarily closed.';
+      const payload = {
+        ticket_code: 'SYS-REG-STATUS',
+        name: 'Public Registration Status',
+        category: 'guest',
+        event_name: 'food_festival',
+        event_names: ['food_festival'],
+        is_checked_in: targetState,
+        faculty: msg,
+        invitation_status: targetState ? 'opened' : 'pending'
+      };
+
+      const { data: existing } = await supabase
+        .from('attendees')
+        .select('id')
+        .eq('ticket_code', 'SYS-REG-STATUS')
+        .maybeSingle();
+
+      let error;
+      if (existing) {
+        const res = await supabase
+          .from('attendees')
+          .update({
+            is_checked_in: targetState,
+            faculty: msg,
+            invitation_status: targetState ? 'opened' : 'pending'
+          })
+          .eq('ticket_code', 'SYS-REG-STATUS');
+        error = res.error;
+      } else {
+        const res = await supabase.from('attendees').insert([payload]);
+        error = res.error;
+      }
+
+      if (error) {
+        showToast(`Failed to update status: ${error.message}`, 'error');
+      } else {
+        setIsPublicRegistrationOpen(targetState);
+        if (!targetState && customMsg) {
+          setPublicRegClosedMessage(customMsg);
+        }
+        showToast(
+          targetState
+            ? 'Public Registration is now OPEN.'
+            : 'Public Registration is now CLOSED.',
+          targetState ? 'success' : 'warning'
+        );
+        setShowCloseModal(false);
+        await loadData();
+      }
+    } catch (err) {
+      showToast(`Error: ${err.message}`, 'error');
+    } finally {
+      setIsTogglingReg(false);
     }
   };
 
@@ -654,6 +736,70 @@ export default function AdminScanner() {
       </header>
 
       <main className="max-w-5xl mx-auto px-3 sm:px-8 pt-4 sm:pt-6 space-y-4 sm:space-y-6">
+        {/* Public Registration Access Control Banner */}
+        <div className={`rounded-2xl p-3.5 sm:px-5 sm:py-3.5 border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all shadow-xs ${
+          isPublicRegistrationOpen
+            ? 'bg-gradient-to-r from-emerald-50/90 to-teal-50/80 border-emerald-200 text-emerald-950'
+            : 'bg-gradient-to-r from-amber-50/90 to-orange-50/80 border-amber-200 text-amber-950'
+        }`}>
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-3 w-3 shrink-0">
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                isPublicRegistrationOpen ? 'bg-emerald-400' : 'bg-amber-400'
+              }`}></span>
+              <span className={`relative inline-flex rounded-full h-3 w-3 ${
+                isPublicRegistrationOpen ? 'bg-emerald-500' : 'bg-amber-500'
+              }`}></span>
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider">
+                  Public Registration: {isPublicRegistrationOpen ? 'OPEN' : 'CLOSED'}
+                </span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                  isPublicRegistrationOpen
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300/60'
+                    : 'bg-amber-100 text-amber-800 border border-amber-300/60'
+                }`}>
+                  {isPublicRegistrationOpen ? 'Accepting Registrations' : 'Registration Closed'}
+                </span>
+              </div>
+              <p className="text-[11px] opacity-80 mt-0.5 leading-relaxed">
+                {isPublicRegistrationOpen
+                  ? 'Visitors can register online via /register or scan the official event QR code.'
+                  : `Access is paused. Notice shown to visitors: "${publicRegClosedMessage || 'Online public registration is temporarily closed.'}"`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            {isPublicRegistrationOpen ? (
+              <button
+                type="button"
+                disabled={isTogglingReg}
+                onClick={() => {
+                  setModalCloseMessage(publicRegClosedMessage || 'Online public registration is temporarily closed and will reopen on the event day at the venue.');
+                  setShowCloseModal(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Close Public Access</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isTogglingReg}
+                onClick={() => handleToggleRegistration(true)}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Unlock className="w-3.5 h-3.5" />
+                <span>Open Public Access</span>
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="flex sm:grid sm:grid-cols-3 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible snap-x snap-mandatory pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
           <div className="min-w-[260px] sm:min-w-0 snap-start bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
@@ -1576,6 +1722,57 @@ export default function AdminScanner() {
                 Confirm Check-In
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirm Close Public Registration */}
+      {showCloseModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-amber-200 w-full max-w-md rounded-[28px] p-6 sm:p-7 text-left shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-amber-600 mb-2">
+              <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 shadow-xs">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">Close Public Registration</h3>
+                <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Access Control</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+              Visitors opening the registration page (<code className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[11px]">/register</code>) will see a notice that registration is closed and won't be able to submit new registrations until you reopen it.
+            </p>
+
+            <div className="mt-4">
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Notice / Information Message for Visitors
+              </label>
+              <textarea
+                rows="3"
+                value={modalCloseMessage}
+                onChange={(e) => setModalCloseMessage(e.target.value)}
+                placeholder="Online public registration is temporarily closed and will reopen on the event day at the venue..."
+                className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white transition"
+              />
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowCloseModal(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-600 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isTogglingReg}
+                onClick={() => handleToggleRegistration(false, modalCloseMessage)}
+                className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {isTogglingReg ? 'Closing...' : 'Confirm & Close Registration'}
+              </button>
+            </div>
           </div>
         </div>
       )}

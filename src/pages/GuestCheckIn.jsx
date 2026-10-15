@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CheckCircle2, Clock, RefreshCw } from 'lucide-react';
 import { supabase } from '../supabase';
 
 const createGuestCode = () => `GST-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
@@ -9,6 +9,37 @@ export default function GuestCheckIn() {
   const [submittedName, setSubmittedName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
+  const [closedMessage, setClosedMessage] = useState('');
+  const [checkingStatus, setCheckingStatus] = useState(true);
+
+  const checkRegistrationStatus = async () => {
+    setCheckingStatus(true);
+    try {
+      const { data } = await supabase
+        .from('attendees')
+        .select('is_checked_in, faculty')
+        .eq('ticket_code', 'SYS-REG-STATUS')
+        .maybeSingle();
+
+      if (data) {
+        setIsRegistrationOpen(Boolean(data.is_checked_in));
+        if (!data.is_checked_in && data.faculty) {
+          setClosedMessage(data.faculty);
+        }
+      } else {
+        setIsRegistrationOpen(true);
+      }
+    } catch (e) {
+      console.warn('Error checking registration status:', e);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    checkRegistrationStatus();
+  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -17,6 +48,22 @@ export default function GuestCheckIn() {
 
     setIsSubmitting(true);
     setError('');
+
+    // Pre-check if registration was closed
+    const { data: statusCheck } = await supabase
+      .from('attendees')
+      .select('is_checked_in, faculty')
+      .eq('ticket_code', 'SYS-REG-STATUS')
+      .maybeSingle();
+
+    if (statusCheck && !statusCheck.is_checked_in) {
+      setIsRegistrationOpen(false);
+      setClosedMessage(statusCheck.faculty || 'Registration is temporarily closed.');
+      setError('Registration is temporarily closed.');
+      setIsSubmitting(false);
+      return;
+    }
+
     const { error: insertError } = await supabase.from('attendees').insert([{
       ticket_code: createGuestCode(),
       name: trimmedName,
@@ -33,6 +80,48 @@ export default function GuestCheckIn() {
     }
     setIsSubmitting(false);
   };
+
+  if (checkingStatus) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-[#392354] via-[#492e6e] to-[#241533] flex items-center justify-center p-5">
+        <div className="w-9 h-9 border-4 border-white/20 border-t-[#ffb800] rounded-full animate-spin"></div>
+      </main>
+    );
+  }
+
+  if (!isRegistrationOpen) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-[#392354] via-[#492e6e] to-[#241533] relative overflow-hidden flex items-center justify-center p-5">
+        <div className="pointer-events-none absolute -top-28 -right-24 h-72 w-72 rounded-full bg-[#ffb800]/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-[#a66bd4]/20 blur-3xl" />
+        <section className="relative w-full max-w-md bg-white rounded-[32px] p-6 sm:p-8 text-center shadow-2xl shadow-black/25">
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <img src="/diyf-logo.png" alt="DIYF" className="h-12 w-12 rounded-2xl object-contain bg-white p-1 shadow-md ring-1 ring-[#492e6e]/10" />
+          </div>
+
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300/60 mt-3">
+            <Clock className="w-3.5 h-3.5" /> Registration Closed
+          </span>
+
+          <h1 className="mt-3 text-xl font-black text-slate-900 sm:text-2xl">
+            Registration Temporarily Closed
+          </h1>
+          <p className="mt-3 text-xs leading-relaxed text-slate-600 sm:text-sm bg-slate-50 border border-slate-200/80 rounded-2xl p-4">
+            {closedMessage || 'Registration is temporarily closed by the committee.'}
+          </p>
+
+          <button
+            type="button"
+            onClick={checkRegistrationStatus}
+            className="mt-6 w-full py-3 rounded-xl bg-[#492e6e] hover:bg-[#392354] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Check Registration Status
+          </button>
+        </section>
+      </main>
+    );
+  }
 
   if (submittedName) {
     return (
@@ -85,7 +174,7 @@ export default function GuestCheckIn() {
               required
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Example: Budi Santoso"
+              placeholder="e.g., Alex Johnson / Budi Santoso"
               className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ffb800] focus:bg-white"
             />
           </div>
